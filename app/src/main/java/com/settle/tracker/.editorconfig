@@ -1,0 +1,13 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+end_of_line = lf
+
+# Rule 1: No indent on empty lines (Trims whitespace from ends of lines)
+trim_trailing_whitespace = true
+
+# Rule 2: All files must end with a new line
+insert_final_newline = true

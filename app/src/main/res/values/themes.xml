@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Settle" parent="Theme.AppCompat.DayNight.NoActionBar" />
+
+    <style name="Theme.Settle.Splash" parent="Theme.Settle">
+        <!-- Background -->
+        <item name="windowSplashScreenBackground">@color/splash_bg</item>
+
+        <!-- App icon (centered) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
+
+        <!-- Theme after splash -->
+        <item name="postSplashScreenTheme">@style/Theme.Settle</item>
+    </style>
+</resources>
