@@ -6,8 +6,6 @@ plugins {
     id("kotlin-parcelize")
     id("com.google.gms.google-services")
     id("com.google.devtools.ksp")
-
-    kotlin("kapt")
 }
 
 android {
@@ -70,7 +68,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.core.splashscreen)
-    kapt(libs.androidx.room.compiler)
+    implementation("com.google.android.play:integrity:1.6.0")
+    ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

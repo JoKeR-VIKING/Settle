@@ -1,29 +1,24 @@
 package com.settle.tracker.utils
 
-import java.util.Locale
-
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.LocalBar
+import androidx.compose.material.icons.filled.LocalPlay
+import androidx.compose.material.icons.filled.Luggage
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.ShoppingBasket
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Subscriptions
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.settle.tracker.R
+import com.settle.tracker.scheme.ExpenseCategory
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.ShoppingBasket
-import androidx.compose.material.icons.filled.LocalBar
-import androidx.compose.material.icons.filled.LocalPlay
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Subscriptions
-import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material.icons.filled.Luggage
-import androidx.compose.material.icons.filled.Category
-
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-
-import java.text.NumberFormat
-
-import com.settle.tracker.R
-import com.settle.tracker.scheme.ExpenseCategory
+import java.util.Locale
 
 fun formatTimestamp(
     timestamp: Long,

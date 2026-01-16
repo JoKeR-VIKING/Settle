@@ -10,6 +10,5 @@ data class ExpenseEntity(
     val details: String,
     val category: String,
     val paidFrom: String,
-    val timestamp: Long,
-    val createdAt: Long
+    val timestamp: Long
 )

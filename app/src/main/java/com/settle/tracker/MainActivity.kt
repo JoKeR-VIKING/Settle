@@ -1,63 +1,80 @@
 package com.settle.tracker
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import kotlinx.coroutines.launch
-
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.LaunchedEffect
-import androidx.core.app.NotificationManagerCompat
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-
-import androidx.compose.material3.Scaffold
-
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.firestore
-
-import com.settle.tracker.ui.theme.SettleTheme
-import com.settle.tracker.utils.Permissions
-import com.settle.tracker.utils.createSmsNotificationChannel
 import com.settle.tracker.components.BottomBar
 import com.settle.tracker.components.BottomBarScreen
 import com.settle.tracker.scheme.UserScheme
-import com.settle.tracker.scheme.ExpenseDraft
-import com.settle.tracker.screens.LoginScreen
-import com.settle.tracker.screens.ExpensesScreen
 import com.settle.tracker.screens.AccountScreen
 import com.settle.tracker.screens.AddEditExpenseScreen
+import com.settle.tracker.screens.ExpensesScreen
+import com.settle.tracker.screens.LoginScreen
+import com.settle.tracker.ui.theme.SettleTheme
+import com.settle.tracker.utils.Permissions
+import com.settle.tracker.utils.createSmsNotificationChannel
+import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Expenses : Screen("expenses")
     object Account : Screen("account")
-    object AddEditExpense : Screen("add_edit_expense?expenseId={expenseId}") {
-        fun createRoute(expenseId: String? = null) =
-            if (expenseId == null) "add_edit_expense"
-            else "add_edit_expense?expenseId=$expenseId"
+    object AddEditExpense : Screen("add_edit_expense?mode={mode}&expenseId={expenseId}") {
+        const val ARG_MODE = "mode"
+        const val ARG_EXPENSE_ID = "expenseId"
+
+        fun createRoute(
+            mode: String,
+            expenseId: String? = null
+        ) =
+            "add_edit_expense?mode=$mode&expenseId=$expenseId"
     }
 }
 
 class MainActivity : ComponentActivity() {
     private lateinit var permissions: Permissions
+
+    private var destination by mutableStateOf<String?>(null)
+    private var mode by mutableStateOf<String?>(null)
+    private var smsExpenseId by mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent ?: return
+
+        setIntent(intent)
+        updateIntent(intent)
+    }
+
+    private fun updateIntent(intent: Intent) {
+        destination = intent.getStringExtra("destination")
+        mode = intent.getStringExtra("mode")
+        smsExpenseId = intent.getStringExtra("smsExpenseId")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,13 +85,14 @@ class MainActivity : ComponentActivity() {
         permissions = Permissions(this)
         lifecycle.addObserver(permissions)
 
-        val openSmsModal = intent.getBooleanExtra("openSmsModal", false)
-        NotificationManagerCompat.from(this).cancelAll()
+        updateIntent(intent)
 
         setContent {
             AppContent(
                 activity = this,
-                openSmsModal = openSmsModal
+                destination = destination,
+                mode = mode,
+                smsExpenseId = smsExpenseId
             )
         }
     }
@@ -83,7 +101,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AppContent(
     activity: MainActivity,
-    openSmsModal: Boolean
+    destination: String?,
+    mode: String?,
+    smsExpenseId: String?
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -155,6 +175,29 @@ private fun AppContent(
         }
     }
 
+    LaunchedEffect(
+        destination,
+        smsExpenseId,
+        mode,
+        currentUser
+    ) {
+        if (
+            destination == "add_edit_expense" &&
+            smsExpenseId != null &&
+            mode != null &&
+            currentUser != null
+        ) {
+            navController.navigate(
+                Screen.AddEditExpense.createRoute(
+                    mode = mode,
+                    expenseId = smsExpenseId
+                )
+            ) {
+                launchSingleTop = true
+            }
+        }
+    }
+
     SettleTheme {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -178,24 +221,21 @@ private fun AppContent(
                     composable(Screen.Expenses.route) {
                         ExpensesScreen(
                             onAddExpense = {
-                                navController.navigate(Screen.AddEditExpense.createRoute()) {
+                                navController.navigate(Screen.AddEditExpense.createRoute("ADD")) {
                                     launchSingleTop = true
                                 }
                             },
-                            onEditExpense = { expense ->
-                                navController.currentBackStackEntry
-                                    ?.savedStateHandle
-                                    ?.set(
-                                        "expenseDraft",
-                                        expense
+                            onEditExpense = { mode, expenseId ->
+                                navController.navigate(
+                                    Screen.AddEditExpense.createRoute(
+                                        mode,
+                                        expenseId
                                     )
-
-                                navController.navigate(Screen.AddEditExpense.route) {
+                                ) {
                                     launchSingleTop = true
                                 }
                             },
-                            currentUser = currentUser!!,
-                            openSmsModal = openSmsModal
+                            currentUser = currentUser!!
                         )
                     }
                     composable(Screen.Account.route) {
@@ -212,24 +252,36 @@ private fun AppContent(
                             }
                         )
                     }
-                    composable(Screen.AddEditExpense.route) {
-                        val expenseDraft =
-                            navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.get<ExpenseDraft>("expenseDraft")
-
-                        LaunchedEffect(Unit) {
-                            navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.remove<ExpenseDraft>("expenseDraft")
-                        }
+                    composable(
+                        Screen.AddEditExpense.route,
+                        arguments = listOf(
+                            navArgument(name = Screen.AddEditExpense.ARG_MODE) {
+                                type = NavType.StringType
+                                nullable = false
+                                defaultValue = "ADD"
+                            },
+                            navArgument(name = Screen.AddEditExpense.ARG_EXPENSE_ID) {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            }
+                        )
+                    ) { navBackStackEntry ->
+                        val mode = navBackStackEntry
+                            .arguments
+                            ?.getString(Screen.AddEditExpense.ARG_MODE)
+                            ?: "ADD"
+                        val expenseId = navBackStackEntry
+                            .arguments
+                            ?.getString(Screen.AddEditExpense.ARG_EXPENSE_ID)
 
                         AddEditExpenseScreen(
                             onBack = {
                                 navController.popBackStack()
                             },
                             currentUser = currentUser!!,
-                            expense = expenseDraft
+                            mode = mode,
+                            expenseId = expenseId
                         )
                     }
                 }

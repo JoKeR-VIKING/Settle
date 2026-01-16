@@ -1,10 +1,9 @@
 package com.settle.tracker.sms
 
-import java.util.Locale
-import java.security.MessageDigest
-
-import com.settle.tracker.scheme.ExpenseDraft
 import com.settle.tracker.scheme.ExpenseCategory
+import com.settle.tracker.scheme.ExpenseScheme
+import java.security.MessageDigest
+import java.util.Locale
 
 object SmsParse {
     private val debitKeywords =
@@ -72,7 +71,7 @@ object SmsParse {
         sender: String,
         body: String,
         receivedAt: Long,
-    ): ExpenseDraft? {
+    ): ExpenseScheme? {
         val text = body.lowercase(Locale.getDefault())
 
         if (
@@ -91,7 +90,7 @@ object SmsParse {
         val details = extractDetails(sender, text)
         val category = extractCategory(text)
 
-        return ExpenseDraft(
+        return ExpenseScheme(
             id = id,
             amount = amount,
             details = details,

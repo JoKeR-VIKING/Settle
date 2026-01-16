@@ -1,14 +1,11 @@
 package com.settle.tracker.utils
 
 import android.Manifest
-import android.util.Log
-
 import android.content.pm.PackageManager
-
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner

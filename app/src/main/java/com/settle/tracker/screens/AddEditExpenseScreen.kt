@@ -2,77 +2,64 @@ package com.settle.tracker.screens
 
 import android.annotation.SuppressLint
 import android.util.Log
-import kotlinx.coroutines.delay
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.lang.Exception
-import java.util.UUID
-
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
-
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberDatePickerState
-
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Money
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Money
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.TransformOrigin
@@ -81,34 +68,34 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
-
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
-
+import com.settle.tracker.AppDatabase
+import com.settle.tracker.components.FourDigitTextField
+import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.scheme.ExpenseCategory
+import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
-import com.settle.tracker.utils.getExpenseCategoryIcon
 import com.settle.tracker.utils.getExpenseCategoryColor
-import com.settle.tracker.scheme.ExpenseCategory
-import com.settle.tracker.scheme.ExpenseDraft
-import com.settle.tracker.AppDatabase
-import com.settle.tracker.components.LoadingScreenWrapper
-import com.settle.tracker.components.FourDigitTextField
+import com.settle.tracker.utils.getExpenseCategoryIcon
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.util.UUID
 
 data class PaymentOption(val name: String, val icon: ImageVector)
 
-enum class ExpenseMode {
-    ADD,
-    EDIT,
-    SMS_ADD
-}
 const val MAX_DESCRIPTION_CHARS = 30
 
 @SuppressLint("ConfigurationScreenWidthHeight")
@@ -117,7 +104,8 @@ const val MAX_DESCRIPTION_CHARS = 30
 fun AddEditExpenseScreen(
     onBack: () -> Unit,
     currentUser: FirebaseUser,
-    expense: ExpenseDraft? = null
+    mode: String,
+    expenseId: String? = null,
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -134,15 +122,8 @@ fun AddEditExpenseScreen(
         skipPartiallyExpanded = false
     )
 
-    val expenseMode by remember {
-        mutableStateOf(when {
-            expense == null -> ExpenseMode.ADD
-            expense.id?.isNotBlank() ?: false -> ExpenseMode.EDIT
-            else -> ExpenseMode.SMS_ADD
-        })
-    }
     var id by remember { mutableStateOf(UUID.randomUUID().toString()) }
-    var smsExpenseId by remember { mutableStateOf(expense?.smsExpenseId) }
+    var smsExpenseId by remember { mutableStateOf(expenseId) }
     var expenseDescription by remember { mutableStateOf(TextFieldValue("")) }
     var amount by remember { mutableStateOf("") }
     var displayAmount by remember { mutableStateOf<String?>(null) }
@@ -156,6 +137,7 @@ fun AddEditExpenseScreen(
     var showCategoryPickerModal by remember { mutableStateOf(false) }
     var showPaidFromModal by remember { mutableStateOf(false) }
     var isSubmittingExpense by remember { mutableStateOf(false) }
+    var isFetchingExpense by remember { mutableStateOf(false) }
 
     val options = listOf(
         PaymentOption("Card", Icons.Filled.CreditCard),
@@ -190,7 +172,7 @@ fun AddEditExpenseScreen(
                 "category" to category.name,
             )
 
-            if (expenseMode != ExpenseMode.EDIT) {
+            if (mode != "EDIT") {
                 expenseMap["createdAt"] = System.currentTimeMillis()
             }
 
@@ -220,10 +202,67 @@ fun AddEditExpenseScreen(
         }
     }
 
-    LaunchedEffect(expense) {
+    LaunchedEffect(expenseId) {
+        if (expenseId == null || mode != "EDIT") return@LaunchedEffect
+        isFetchingExpense = true
+
+        db
+            .collection("users")
+            .document(currentUser.uid)
+            .collection("expenses")
+            .document(expenseId)
+            .get()
+            .addOnSuccessListener { document ->
+                val expense =
+                    document.toObject(ExpenseScheme::class.java) ?: return@addOnSuccessListener
+
+                id = expense.id
+                expenseDescription = TextFieldValue(expense.details)
+                amount = expense.amount.toString()
+                category = ExpenseCategory.valueOf(expense.category)
+                paidFrom = expense.paidFrom
+                datePickerState.selectedDateMillis = expense.timestamp
+
+                when {
+                    expense.paidFrom.contains("Card") -> {
+                        selectedIndex = 0
+                        lastFourDigits = expense.paidFrom.takeLast(4)
+                    }
+
+                    expense.paidFrom.contains("Bank A/C") -> {
+                        selectedIndex = 1
+                        lastFourDigits = expense.paidFrom.takeLast(4)
+                    }
+
+                    expense.paidFrom.contains("Wallet") -> {
+                        selectedIndex = 2
+                        lastFourDigits = ""
+                    }
+
+                    else -> selectedIndex = -1
+                }
+
+                isFetchingExpense = false
+            }
+            .addOnFailureListener { e ->
+                isFetchingExpense = false
+                Log.e("Firestore", "${e.message}")
+            }
+    }
+
+    LaunchedEffect(expenseId) {
+        if (expenseId == null || mode != "SMS_ADD") return@LaunchedEffect
+        isFetchingExpense = true
+
+        val expenseDao = AppDatabase
+            .getInstance(context)
+            .expenseDraftDao()
+        val expense = expenseDao
+            .getOne(expenseId)
+            .first()
+
         if (expense == null) return@LaunchedEffect
 
-        id = expense.id?.takeIf { it.isNotBlank() } ?: id
         expenseDescription = TextFieldValue(expense.details)
         amount = expense.amount.toString()
         category = ExpenseCategory.valueOf(expense.category)
@@ -235,16 +274,21 @@ fun AddEditExpenseScreen(
                 selectedIndex = 0
                 lastFourDigits = expense.paidFrom.takeLast(4)
             }
+
             expense.paidFrom.contains("Bank A/C") -> {
                 selectedIndex = 1
                 lastFourDigits = expense.paidFrom.takeLast(4)
             }
+
             expense.paidFrom.contains("Wallet") -> {
                 selectedIndex = 2
                 lastFourDigits = ""
             }
+
             else -> selectedIndex = -1
         }
+
+        isFetchingExpense = false
     }
 
     LaunchedEffect(datePickerState.selectedDateMillis) {
@@ -257,8 +301,8 @@ fun AddEditExpenseScreen(
     }
 
     LoadingScreenWrapper(
-        isSubmittingExpense,
-        "Submitting expense..."
+        isSubmittingExpense || isFetchingExpense,
+        if (isFetchingExpense) "Fetching expense..." else "Submitting expense..."
     ) {
         Box(
             modifier = Modifier
@@ -291,7 +335,7 @@ fun AddEditExpenseScreen(
                     }
 
                     Text(
-                        if (expenseMode == ExpenseMode.EDIT) "Edit Expense" else "Add Expense",
+                        if (mode == "EDIT") "Edit Expense" else "Add Expense",
                         style = MaterialTheme.typography.bodyLarge,
                         fontSize = 18.sp,
                         letterSpacing = 0.5.sp,
@@ -587,14 +631,17 @@ fun AddEditExpenseScreen(
                                     selectedIndex = 0
                                     lastFourDigits = paidFrom.takeLast(4)
                                 }
+
                                 paidFrom.contains("Bank A/C") -> {
                                     selectedIndex = 1
                                     lastFourDigits = paidFrom.takeLast(4)
                                 }
+
                                 paidFrom.contains("Wallet") -> {
                                     selectedIndex = 2
                                     lastFourDigits = ""
                                 }
+
                                 else -> {
                                     selectedIndex = -1
                                     lastFourDigits = ""
