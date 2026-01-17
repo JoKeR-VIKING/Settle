@@ -1,6 +1,5 @@
 package com.settle.tracker.components.expenses
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -14,13 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,10 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.settle.tracker.AppDatabase
+import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
@@ -210,74 +205,22 @@ fun ExpenseRow(
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = {
-                Text(
-                    "Delete Expense",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        "Are you sure you want to delete this expense?",
-                        style = MaterialTheme.typography.labelMedium,
-                        letterSpacing = 0.5.sp
-                    )
+        ConfirmAlertDialog(
+            title = "Delete Expense",
+            text = "Are you sure you want to delete this expense?",
+            subText = "This action cannot be undone.",
+            onConfirm = {
+                if (smsExpenseId != null) {
+                    scope.launch {
+                        expenseDao.delete(smsExpenseId)
+                    }
+                } else {
+                    onDeleteExpense(expense.id)
+                }
 
-                    Text(
-                        "This action cannot be undone.",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                }
+                showDeleteDialog = false
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (smsExpenseId != null) {
-                            scope.launch {
-                                expenseDao.delete(smsExpenseId)
-                            }
-                        } else {
-                            onDeleteExpense(expense.id)
-                        }
-
-                        showDeleteDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onSecondary
-                    )
-                ) {
-                    Text(
-                        "Delete",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showDeleteDialog = false },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = MaterialTheme.colorScheme.onSecondary
-                    ),
-                    border = BorderStroke(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(
-                        "Cancel",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            }
+            toggleAlert = { showDeleteDialog = false }
         )
     }
 }

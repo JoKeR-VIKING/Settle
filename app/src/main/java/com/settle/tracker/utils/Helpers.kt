@@ -10,8 +10,14 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Subscriptions
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import com.settle.tracker.R
 import com.settle.tracker.scheme.ExpenseCategory
 import java.text.NumberFormat
@@ -97,3 +103,29 @@ fun getExpenseCategoryColor(expenseCategory: String): Color {
         ExpenseCategory.MISC -> Color(0xFF546E7A)
     }
 }
+
+fun Modifier.dashedBorder(
+    strokeWidth: Dp,
+    color: Color,
+    cornerRadius: Dp,
+    dashLength: Float = 12f,
+    gapLength: Float = 8f
+) = this.then(
+    Modifier.drawBehind {
+        val stroke = Stroke(
+            width = strokeWidth.toPx(),
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(dashLength, gapLength)
+            )
+        )
+
+        drawRoundRect(
+            color = color,
+            style = stroke,
+            cornerRadius = CornerRadius(
+                x = cornerRadius.toPx(),
+                y = cornerRadius.toPx()
+            )
+        )
+    }
+)

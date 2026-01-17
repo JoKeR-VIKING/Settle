@@ -2,6 +2,7 @@ package com.settle.tracker.components
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.Icon
@@ -24,11 +25,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 
 sealed class BottomBarScreen(val route: String, val title: String, val icon: ImageVector) {
     object Expenses : BottomBarScreen("expenses", "Expenses", Icons.Filled.PieChart)
+    object Groups : BottomBarScreen("groups", "Groups", Icons.Filled.Groups)
     object Account : BottomBarScreen("account", "Account", Icons.Filled.Person)
 
     companion object {
         val routes = listOf(
             Expenses.route,
+            Groups.route,
             Account.route
         )
     }
@@ -40,7 +43,8 @@ fun BottomBar(
 ) {
     val screens = listOf(
         BottomBarScreen.Expenses,
-        BottomBarScreen.Account,
+        BottomBarScreen.Groups,
+        BottomBarScreen.Account
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination

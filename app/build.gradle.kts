@@ -6,6 +6,7 @@ plugins {
     id("kotlin-parcelize")
     id("com.google.gms.google-services")
     id("com.google.devtools.ksp")
+    id("com.google.firebase.appdistribution")
 }
 
 android {
@@ -18,8 +19,8 @@ android {
         applicationId = "com.settle.tracker"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,6 +32,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            firebaseAppDistributionDefault {
+                testers = "prathamvasani1@gmail.com, divyakhilari2003@gmail.com"
+            }
+        }
+        debug {
+            firebaseAppDistributionDefault {
+                testers = "prathamvasani1@gmail.com, divyakhilari2003@gmail.com"
+            }
         }
     }
     compileOptions {

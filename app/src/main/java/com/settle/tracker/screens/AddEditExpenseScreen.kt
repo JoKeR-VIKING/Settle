@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Money
@@ -76,11 +79,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.AppDatabase
-import com.settle.tracker.components.FourDigitTextField
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.MultiDigitTextField
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
@@ -133,6 +137,14 @@ fun AddEditExpenseScreen(
     var selectedIndex by remember { mutableIntStateOf(-1) }
     var lastFourDigits by remember { mutableStateOf("") }
 
+    var previousPaymentMethods by remember { mutableStateOf<List<String>>(emptyList()) }
+    val paymentPages = remember(previousPaymentMethods) {
+        previousPaymentMethods.chunked(2)
+    }
+    val pagerState = rememberPagerState(
+        pageCount = { paymentPages.size }
+    )
+
     var showDatePickerModal by remember { mutableStateOf(false) }
     var showCategoryPickerModal by remember { mutableStateOf(false) }
     var showPaidFromModal by remember { mutableStateOf(false) }
@@ -146,7 +158,7 @@ fun AddEditExpenseScreen(
     )
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
-    val partialHeight = screenHeight * 0.25f
+    val partialHeight = screenHeight * 0.4f
 
     val context = LocalContext.current
     val expenseDao = AppDatabase
@@ -300,6 +312,26 @@ fun AddEditExpenseScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        db
+            .collection("users")
+            .document(currentUser.uid)
+            .collection("expenses")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(50)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val recentPaidFrom = snapshot.documents
+                    .mapNotNull { it.getString("paidFrom") }
+                    .filterNot { paidFrom ->
+                        paidFrom == "Cash" || paidFrom == "Wallet"
+                    }
+                    .distinct()
+
+                previousPaymentMethods = recentPaidFrom
+            }
+    }
+
     LoadingScreenWrapper(
         isSubmittingExpense || isFetchingExpense,
         if (isFetchingExpense) "Fetching expense..." else "Submitting expense..."
@@ -359,7 +391,6 @@ fun AddEditExpenseScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-
                     OutlinedTextField(
                         modifier = Modifier
                             .fillMaxWidth(0.95f)
@@ -657,45 +688,122 @@ fun AddEditExpenseScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.SpaceAround
                         ) {
-                            SingleChoiceSegmentedButtonRow(
-                                modifier = Modifier.fillMaxWidth(0.9f)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(0.95f),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                options.forEachIndexed { index, label ->
-                                    SegmentedButton(
-                                        label = {
-                                            Text(
-                                                text = label.name,
-                                                style = MaterialTheme.typography.labelMedium,
-                                                maxLines = 1,
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            pagerState.animateScrollToPage(
+                                                (pagerState.currentPage - 1).coerceAtLeast(0)
                                             )
-                                        },
-                                        icon = {
-                                            Icon(
-                                                imageVector = label.icon,
-                                                contentDescription = label.name
-                                            )
-                                        },
-                                        shape = SegmentedButtonDefaults.itemShape(
-                                            index = index,
-                                            count = options.size
-                                        ),
-                                        selected = selectedIndex == index,
-                                        onClick = {
-                                            selectedIndex = index
-                                            lastFourDigits = ""
                                         }
-                                    )
+                                    },
+                                    enabled = pagerState.currentPage > 0
+                                ) {
+                                    Icon(Icons.Filled.ChevronLeft, contentDescription = "Previous")
+                                }
+
+                                HorizontalPager(
+                                    modifier = Modifier.weight(1f),
+                                    state = pagerState,
+                                ) { pageIndex ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        SingleChoiceSegmentedButtonRow(
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            paymentPages[pageIndex].forEachIndexed { index, label ->
+                                                SegmentedButton(
+                                                    label = {
+                                                        Text(
+                                                            text = label,
+                                                            style = MaterialTheme.typography.labelMedium,
+                                                            maxLines = 2,
+                                                            textAlign = TextAlign.Center
+                                                        )
+                                                    },
+                                                    shape = SegmentedButtonDefaults.itemShape(
+                                                        index = index,
+                                                        count = paymentPages[pageIndex].size
+                                                    ),
+                                                    selected = paidFrom == label,
+                                                    onClick = {
+                                                        paidFrom = label
+                                                        showPaidFromModal = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            pagerState.animateScrollToPage(
+                                                (pagerState.currentPage + 1).coerceAtMost(pagerState.pageCount - 1)
+                                            )
+                                        }
+                                    },
+                                    enabled = pagerState.currentPage < pagerState.pageCount - 1
+                                ) {
+                                    Icon(Icons.Filled.ChevronRight, contentDescription = "Next")
                                 }
                             }
 
-                            FourDigitTextField(
-                                lastFourDigits,
-                                onValueChange = {
-                                    lastFourDigits = it
-                                },
-                                isVisible = selectedIndex in 0..1,
-                                helperText = if (selectedIndex in 0..1) "Enter the last 4 digits of your ${options[selectedIndex].name}" else ""
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                SingleChoiceSegmentedButtonRow(
+                                    modifier = Modifier.fillMaxWidth(0.9f)
+                                ) {
+                                    options.forEachIndexed { index, label ->
+                                        SegmentedButton(
+                                            label = {
+                                                Text(
+                                                    text = label.name,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    maxLines = 1,
+                                                )
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = label.icon,
+                                                    contentDescription = label.name
+                                                )
+                                            },
+                                            shape = SegmentedButtonDefaults.itemShape(
+                                                index = index,
+                                                count = options.size
+                                            ),
+                                            selected = selectedIndex == index,
+                                            onClick = {
+                                                selectedIndex = index
+                                                lastFourDigits = ""
+                                            }
+                                        )
+                                    }
+                                }
+
+                                MultiDigitTextField(
+                                    numberOfDigits = 4,
+                                    lastFourDigits,
+                                    onValueChange = {
+                                        lastFourDigits = it
+                                    },
+                                    isVisible = selectedIndex in 0..1,
+                                    helperText = if (selectedIndex in 0..1) "Enter the last 4 digits of your ${options[selectedIndex].name}" else ""
+                                )
+                            }
 
                             Button(
                                 onClick = {

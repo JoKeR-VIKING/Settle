@@ -26,14 +26,17 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.BottomBar
 import com.settle.tracker.components.BottomBarScreen
-import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.screens.AccountScreen
 import com.settle.tracker.screens.AddEditExpenseScreen
 import com.settle.tracker.screens.ExpensesScreen
+import com.settle.tracker.screens.GroupExpensesScreen
+import com.settle.tracker.screens.GroupsScreen
 import com.settle.tracker.screens.LoginScreen
+import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.ui.theme.SettleTheme
 import com.settle.tracker.utils.Permissions
 import com.settle.tracker.utils.createSmsNotificationChannel
@@ -41,6 +44,7 @@ import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
+    object PhoneVerification : Screen("phone_verification")
     object Expenses : Screen("expenses")
     object Account : Screen("account")
     object AddEditExpense : Screen("add_edit_expense?mode={mode}&expenseId={expenseId}") {
@@ -52,6 +56,14 @@ sealed class Screen(val route: String) {
             expenseId: String? = null
         ) =
             "add_edit_expense?mode=$mode&expenseId=$expenseId"
+    }
+    object Groups : Screen("groups")
+    object GroupExpenses : Screen("group_expenses?groupId={groupId}") {
+        const val ARG_GROUP_ID = "groupId"
+
+        fun createRoute(
+            groupId: String
+        ) = "group_expenses?groupId=$groupId"
     }
 }
 
@@ -115,7 +127,16 @@ private fun AppContent(
     val googleAuthClient = remember { GoogleAuthClient(activity) }
     var currentUser by remember { mutableStateOf(googleAuthClient.getSignedInUser()) }
     val startDestination = remember {
-        if (currentUser != null) Screen.Expenses.route else Screen.Login.route
+        if (currentUser == null) {
+            Screen.Login.route
+        } else if (
+            currentUser?.phoneNumber == null ||
+            currentUser?.phoneNumber?.isBlank() == true
+        ) {
+            Screen.PhoneVerification.route
+        } else {
+            Screen.Expenses.route
+        }
     }
 
     val db = Firebase.firestore
@@ -135,18 +156,33 @@ private fun AppContent(
                     .collection("users")
                     .document(signedInUser.uid)
 
+            val userData = mutableMapOf<String, Any>(
+                "id" to signedInUser.uid,
+                "name" to (signedInUser.displayName ?: ""),
+                "email" to (signedInUser.email ?: ""),
+                "phoneNumber" to (signedInUser.phoneNumber ?: ""),
+                "photoUrl" to (signedInUser.photoUrl ?: "")
+            )
+
             userRef
                 .get()
                 .addOnSuccessListener { document ->
                     if (!document.exists()) {
-                        userRef
-                            .set(
-                                UserScheme(
-                                    upiId = "",
-                                )
-                            )
-                            .addOnSuccessListener { _ ->
-                                currentUser = signedInUser
+                        userData["upiId"] = ""
+                    }
+
+                    userRef
+                        .set(userData, SetOptions.merge())
+                        .addOnSuccessListener {
+                            currentUser = signedInUser
+                            if (signedInUser.phoneNumber == null) {
+                                navController.navigate(Screen.PhoneVerification.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
+                                }
+                            } else {
                                 navController.navigate(Screen.Expenses.route) {
                                     popUpTo(navController.graph.startDestinationId) {
                                         inclusive = true
@@ -154,18 +190,10 @@ private fun AppContent(
                                     launchSingleTop = true
                                 }
                             }
-                            .addOnFailureListener { e ->
-                                handleFailure(e)
-                            }
-                    } else {
-                        currentUser = signedInUser
-                        navController.navigate(Screen.Expenses.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
                         }
-                    }
+                        .addOnFailureListener { e ->
+                            handleFailure(e)
+                        }
                 }
                 .addOnFailureListener { e ->
                     handleFailure(e)
@@ -216,6 +244,18 @@ private fun AppContent(
                         LoginScreen(
                             googleAuthClient,
                             onLoginSuccess = onLoginSuccess
+                        )
+                    }
+                    composable(Screen.PhoneVerification.route) {
+                        PhoneVerificationScreen(
+                            onPhoneVerified = {
+                                navController.navigate(Screen.Expenses.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
+                                }
+                            }
                         )
                     }
                     composable(Screen.Expenses.route) {
@@ -282,6 +322,41 @@ private fun AppContent(
                             currentUser = currentUser!!,
                             mode = mode,
                             expenseId = expenseId
+                        )
+                    }
+                    composable(Screen.Groups.route) {
+                        GroupsScreen(
+                            currentUser = currentUser!!,
+                            onOpenGroup = { groupId ->
+                                navController.navigate(
+                                    Screen.GroupExpenses.createRoute(
+                                        groupId
+                                    )
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                    }
+                    composable(
+                        Screen.GroupExpenses.route,
+                        arguments = listOf(
+                            navArgument(name = Screen.GroupExpenses.ARG_GROUP_ID) {
+                                type = NavType.StringType
+                                nullable = false
+                                defaultValue = ""
+                            }
+                        )
+                    ) { navBackStackEntry ->
+                        val groupId = navBackStackEntry
+                            .arguments
+                            ?.getString(Screen.GroupExpenses.ARG_GROUP_ID)
+
+                        GroupExpensesScreen(
+                            groupId = groupId!!,
+                            onBack = {
+                                navController.popBackStack()
+                            }
                         )
                     }
                 }

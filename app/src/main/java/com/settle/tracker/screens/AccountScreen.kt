@@ -169,7 +169,9 @@ fun AccountScreen(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    Column {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
                             "${user?.displayName}",
                             style = MaterialTheme.typography.bodyLarge,
@@ -178,6 +180,13 @@ fun AccountScreen(
 
                         Text(
                             "${user?.email}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 1.sp,
+                        )
+
+                        Text(
+                            "${user?.phoneNumber}",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             letterSpacing = 1.sp,

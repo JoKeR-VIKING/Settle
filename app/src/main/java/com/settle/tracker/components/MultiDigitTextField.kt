@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,9 +30,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 @Composable
-fun FourDigitTextField(
+fun MultiDigitTextField(
+    numberOfDigits: Int,
     lastFourDigits: String,
     onValueChange: (String) -> Unit,
     isVisible: Boolean,
@@ -43,6 +46,13 @@ fun FourDigitTextField(
         handleColor = Color.Transparent,
         backgroundColor = Color.Transparent,
     )
+
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            delay(100)
+            focusRequester.requestFocus()
+        }
+    }
 
     Box(
         contentAlignment = Alignment.Center,
@@ -61,7 +71,7 @@ fun FourDigitTextField(
                     .drawWithContent {},
                 value = lastFourDigits,
                 onValueChange = {
-                    if (it.length <= 4 && it.all { char -> char.isDigit() }) {
+                    if (it.length <= numberOfDigits && it.all { char -> char.isDigit() }) {
                         onValueChange(it)
                     }
                 },
@@ -80,14 +90,14 @@ fun FourDigitTextField(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                repeat(4) { index ->
+                repeat(numberOfDigits) { index ->
                     val char = when {
                         index >= lastFourDigits.length -> ""
                         else -> lastFourDigits[index].toString()
                     }
 
                     val isFocused = (lastFourDigits.length == index ||
-                        (lastFourDigits.length == 4 && index == 3))
+                        (lastFourDigits.length == numberOfDigits && index == numberOfDigits - 1))
 
                     DigitBox(char = char, isFocused = isFocused)
                 }

@@ -18,7 +18,8 @@ class Permissions(
     private val permissions = arrayOf(
         Manifest.permission.RECEIVE_SMS,
         Manifest.permission.READ_SMS,
-        Manifest.permission.POST_NOTIFICATIONS
+        Manifest.permission.POST_NOTIFICATIONS,
+        Manifest.permission.READ_CONTACTS
     )
 
     override fun onCreate(owner: LifecycleOwner) {
