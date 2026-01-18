@@ -252,6 +252,7 @@ fun AddEditExpenseScreen(
                 amount = expense.amount.toString()
                 category = ExpenseCategory.valueOf(expense.category)
                 paidFrom = expense.paidFrom
+                paidBy = expense.paidBy
                 datePickerState.selectedDateMillis = expense.timestamp
 
                 when {
