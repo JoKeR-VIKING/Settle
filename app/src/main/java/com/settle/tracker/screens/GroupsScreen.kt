@@ -18,15 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -45,6 +41,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.groups.CreateGroupModal
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.utils.dashedBorder
 import java.util.UUID
@@ -212,58 +209,14 @@ fun GroupsScreen(
                 }
 
                 if (showGroupModal) {
-                    ModalBottomSheet(
+                    CreateGroupModal(
                         sheetState = groupModalSheetState,
-                        onDismissRequest = {
-                            showGroupModal = false
-                        },
-                        dragHandle = { BottomSheetDefaults.DragHandle() }
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            OutlinedTextField(
-                                modifier = Modifier.fillMaxWidth(0.90f),
-                                textStyle = MaterialTheme.typography.labelLarge,
-                                shape = RoundedCornerShape(15),
-                                label = {
-                                    Text(
-                                        "Group Name",
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                },
-                                supportingText = {
-                                    Box(modifier = Modifier.fillMaxWidth()) {
-                                        Text(
-                                            text = "${newGroupName.text.length} / $MAX_GROUP_NAME_CHARS",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.align(Alignment.CenterEnd),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                },
-                                value = newGroupName,
-                                onValueChange = {
-                                    if (it.text.length <= MAX_GROUP_NAME_CHARS) newGroupName = it
-                                },
-                                singleLine = true
-                            )
-
-                            Button(
-                                modifier = Modifier.fillMaxWidth(0.90f),
-                                onClick = { createGroup() },
-                                enabled = !isSubmitting && newGroupName.text.isNotBlank(),
-                                shape = RoundedCornerShape(25),
-                            ) {
-                                Text(
-                                    "Add Group",
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        }
-                    }
+                        onDismissRequest = { showGroupModal = false },
+                        groupName = newGroupName,
+                        onGroupNameChange = { newGroupName = it },
+                        isSubmitting = isSubmitting,
+                        onCreateGroup = { createGroup() }
+                    )
                 }
             }
         }

@@ -1,9 +1,7 @@
 package com.settle.tracker.screens
 
 import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,8 +14,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
@@ -25,6 +21,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.FabMenu
+import com.settle.tracker.components.common.FabOverlay
 import com.settle.tracker.components.expenses.ExpenseTable
 import com.settle.tracker.scheme.ExpenseScheme
 
@@ -115,17 +112,9 @@ fun ExpensesScreen(
             )
         }
 
-        if (expanded) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            expanded = false
-                        }
-                    }
-            )
-        }
+        FabOverlay(
+            visible = expanded,
+            onDismiss = { expanded = false }
+        )
     }
 }

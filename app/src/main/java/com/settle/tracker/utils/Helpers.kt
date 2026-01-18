@@ -39,7 +39,7 @@ fun formatTimestamp(
 }
 
 fun formatCurrency(amount: Double): String {
-    val indiaLocale = Locale("en", "IN")
+    val indiaLocale = Locale.forLanguageTag("en-IN")
     val formatter = NumberFormat.getCurrencyInstance(indiaLocale)
     return formatter.format(amount)
 }
@@ -129,3 +129,29 @@ fun Modifier.dashedBorder(
         )
     }
 )
+
+data class PaymentMethodInfo(
+    val selectedIndex: Int,
+    val lastFourDigits: String
+)
+
+fun parsePaymentMethod(paidFrom: String): PaymentMethodInfo {
+    return when {
+        paidFrom.contains("Card") -> PaymentMethodInfo(
+            selectedIndex = 0,
+            lastFourDigits = paidFrom.takeLast(4)
+        )
+        paidFrom.contains("Bank A/C") -> PaymentMethodInfo(
+            selectedIndex = 1,
+            lastFourDigits = paidFrom.takeLast(4)
+        )
+        paidFrom.contains("Wallet") -> PaymentMethodInfo(
+            selectedIndex = 2,
+            lastFourDigits = ""
+        )
+        else -> PaymentMethodInfo(
+            selectedIndex = -1,
+            lastFourDigits = ""
+        )
+    }
+}

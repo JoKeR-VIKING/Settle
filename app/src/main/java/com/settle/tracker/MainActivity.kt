@@ -58,7 +58,7 @@ sealed class Screen(val route: String) {
             expenseId: String? = null,
             groupId: String? = null
         ) =
-            "add_edit_expense?&mode=$mode&expenseId=$expenseId&groupId=$groupId"
+            "add_edit_expense?mode=$mode&expenseId=$expenseId&groupId=$groupId"
     }
 
     object Groups : Screen("groups")

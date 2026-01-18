@@ -47,7 +47,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.settle.tracker.AppDatabase
-import com.settle.tracker.components.expenses.ExpenseTable
+import com.settle.tracker.components.expenses.SmsExpenseModal
 import com.settle.tracker.scheme.ExpenseScheme
 
 @SuppressLint("ConfigurationScreenWidthHeight")
@@ -82,9 +82,6 @@ fun FabMenu(
         )
     }
     val expenseIds = drafts.map { it.id }
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
-    val partialHeight = screenHeight * 0.45f
 
     val rotation by animateFloatAsState(
         targetValue = if (expanded) -45f else 0f,
@@ -156,69 +153,13 @@ fun FabMenu(
         }
 
         if (showSmsModal) {
-            ModalBottomSheet(
+            SmsExpenseModal(
                 sheetState = smsModalSheetstate,
-                onDismissRequest = { showSmsModal = false }
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = 16.dp)
-                    ) {
-                        Text(
-                            "${expenses.size}/50",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.align(Alignment.CenterEnd),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    if (expenses.isNotEmpty()) {
-                        ExpenseTable(
-                            expenses = expenses,
-                            smsExpenseIds = expenseIds,
-                            toggleSmsModal = {
-                                showSmsModal = false
-                            },
-                            onEditExpense = onEditExpense,
-                            onDeleteExpense = {},
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .defaultMinSize(minHeight = partialHeight)
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .defaultMinSize(minHeight = partialHeight),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Sms,
-                                    contentDescription = "Empty SMS"
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Text(
-                                    "No SMS expenses found",
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+                onDismissRequest = { showSmsModal = false },
+                expenses = expenses,
+                expenseIds = expenseIds,
+                onEditExpense = onEditExpense
+            )
         }
     }
 }

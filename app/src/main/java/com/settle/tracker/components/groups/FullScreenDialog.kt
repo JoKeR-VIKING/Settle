@@ -8,25 +8,17 @@ import android.provider.ContactsContract
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -34,8 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -60,10 +50,10 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.groups.AddMemberButton
+import com.settle.tracker.components.groups.GroupNameField
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.UserScheme
-import com.settle.tracker.screens.MAX_GROUP_NAME_CHARS
-import com.settle.tracker.utils.dashedBorder
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -274,43 +264,12 @@ fun FullScreenDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            OutlinedTextField(
-                                modifier = Modifier.fillMaxWidth(0.85f),
-                                textStyle = MaterialTheme.typography.labelMedium,
-                                shape = RoundedCornerShape(15),
-                                label = {
-                                    Text(
-                                        "Group Name",
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                },
-                                supportingText = {
-                                    Box(modifier = Modifier.fillMaxWidth()) {
-                                        Text(
-                                            text = "${groupName.text.length} / $MAX_GROUP_NAME_CHARS",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.align(Alignment.CenterEnd),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                },
-                                value = groupName,
-                                onValueChange = {
-                                    if (it.text.length <= MAX_GROUP_NAME_CHARS) groupName = it
-                                },
-                                enabled = !isEditingGroupName,
-                                singleLine = true,
-                                trailingIcon = {
-                                    if (groupName.text != groupData.groupName) {
-                                        IconButton(
-                                            onClick = { updateGroupName() }) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Check,
-                                                contentDescription = "Save Group Name Changes",
-                                            )
-                                        }
-                                    }
-                                }
+                            GroupNameField(
+                                groupName = groupName,
+                                originalGroupName = groupData.groupName,
+                                onGroupNameChange = { groupName = it },
+                                isEditing = isEditingGroupName,
+                                onSave = { updateGroupName() }
                             )
 
                             IconButton(
@@ -330,22 +289,7 @@ fun FullScreenDialog(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            OutlinedButton(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .dashedBorder(
-                                        2.dp,
-                                        MaterialTheme.colorScheme.primary,
-                                        cornerRadius = 10.dp,
-                                        dashLength = 30f,
-                                        gapLength = 15f
-                                    ),
-                                contentPadding = PaddingValues(vertical = 14.dp),
-                                border = BorderStroke(
-                                    width = 0.dp,
-                                    color = Color.Transparent
-                                ),
-                                shape = RoundedCornerShape(10),
+                            AddMemberButton(
                                 onClick = {
                                     contactPickerLauncher.launch(
                                         Intent(
@@ -354,22 +298,7 @@ fun FullScreenDialog(
                                         )
                                     )
                                 }
-                            ) {
-                                Icon(
-                                    modifier = Modifier.size(20.dp),
-                                    imageVector = Icons.Filled.Add,
-                                    contentDescription = "Add New Member",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-
-                                Spacer(modifier = Modifier.width(10.dp))
-
-                                Text(
-                                    "Add Member",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            )
 
                             Spacer(modifier = Modifier.height(8.dp))
 

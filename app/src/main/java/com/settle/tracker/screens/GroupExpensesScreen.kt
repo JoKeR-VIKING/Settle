@@ -1,9 +1,7 @@
 package com.settle.tracker.screens
 
 import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,8 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -40,11 +36,18 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.FabMenu
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.common.FabOverlay
 import com.settle.tracker.components.expenses.ExpenseTable
 import com.settle.tracker.components.groups.FullScreenDialog
+import com.settle.tracker.components.groups.GroupTabRow
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.PaidBy
+
+enum class GroupTab {
+    EXPENSES,
+    BALANCES
+}
 
 @Composable
 fun GroupExpensesScreen(
@@ -60,6 +63,7 @@ fun GroupExpensesScreen(
     var groupData by remember { mutableStateOf(GroupScheme()) }
     var isFetching by remember { mutableStateOf(false) }
     var showGroupDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(GroupTab.EXPENSES) }
 
     var expenses by remember { mutableStateOf<List<ExpenseScheme>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
@@ -188,51 +192,51 @@ fun GroupExpensesScreen(
                     }
                 }
 
-                Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    floatingActionButton = {
-                        FabMenu(
-                            expanded = expanded,
-                            onToggleExpanded = {
-                                expanded = !expanded
-                            },
-                            onAddExpense = onAddExpense,
-                            onEditExpense = onEditExpense
-                        )
-                    },
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = 16.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                focusManager.clearFocus()
-                            },
-                    ) {
-                        ExpenseTable(
-                            expenses = expenses,
-                            onEditExpense = onEditExpense,
-                            onDeleteExpense = onDeleteExpense,
-                            modifier = Modifier
-                        )
-                    }
+                GroupTabRow(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it }
+                )
 
-                    if (expanded) {
+                if (selectedTab == GroupTab.EXPENSES) {
+                    Scaffold(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        floatingActionButton = {
+                            FabMenu(
+                                expanded = expanded,
+                                onToggleExpanded = {
+                                    expanded = !expanded
+                                },
+                                onAddExpense = onAddExpense,
+                                onEditExpense = onEditExpense
+                            )
+                        },
+                    ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.4f))
-                                .pointerInput(Unit) {
-                                    detectTapGestures {
-                                        expanded = false
-                                    }
-                                }
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    focusManager.clearFocus()
+                                },
+                        ) {
+                            ExpenseTable(
+                                expenses = expenses,
+                                onEditExpense = onEditExpense,
+                                onDeleteExpense = onDeleteExpense,
+                                modifier = Modifier
+                            )
+                        }
+
+                        FabOverlay(
+                            visible = expanded,
+                            onDismiss = { expanded = false }
                         )
                     }
+                } else {
+                    Text("Balances")
                 }
             }
 

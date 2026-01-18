@@ -2,30 +2,22 @@ package com.settle.tracker.screens
 
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,21 +29,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.GoogleAuthClient
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.account.ProfileHeader
+import com.settle.tracker.components.account.UpiIdField
 import com.settle.tracker.scheme.UserScheme
 import kotlinx.coroutines.launch
 
@@ -153,77 +143,16 @@ fun AccountScreen(
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(40.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AsyncImage(
-                        model = user?.photoUrl,
-                        contentDescription = "Profile Picture",
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                        contentScale = ContentScale.Crop,
-                    )
+                ProfileHeader(user = user)
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            "${user?.displayName}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            letterSpacing = 1.sp,
-                        )
-
-                        Text(
-                            "${user?.email}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 1.sp,
-                        )
-
-                        Text(
-                            "${user?.phoneNumber}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 1.sp,
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .fillMaxWidth(0.95f)
-                            .focusRequester(upiIdFocus),
-                        textStyle = MaterialTheme.typography.labelLarge,
-                        shape = RoundedCornerShape(15),
-                        label = { Text("Your UPI ID", style = MaterialTheme.typography.labelMedium) },
-                        placeholder = { Text("example@ok_icici") },
-                        value = upiId,
-                        onValueChange = { upiId = it },
-                        enabled = !isEditingUser,
-                        singleLine = true,
-                        trailingIcon = {
-                            if (upiId.text != upiIdSynced) {
-                                IconButton(
-                                    onClick = { updateUser() }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = "Save UPI ID Changes",
-                                    )
-                                }
-                            }
-                        }
-                    )
-                }
+                UpiIdField(
+                    upiId = upiId,
+                    upiIdSynced = upiIdSynced,
+                    isEditing = isEditingUser,
+                    onUpiIdChange = { upiId = it },
+                    onSave = { updateUser() },
+                    focusRequester = upiIdFocus
+                )
 
                 Spacer(modifier = Modifier.weight(1f))
 
