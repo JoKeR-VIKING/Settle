@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.scheme.GroupScheme
@@ -40,13 +42,14 @@ import com.settle.tracker.scheme.UserScheme
 
 @Composable
 fun GroupMemberList(
-    groupMembers: List<UserScheme>,
     groupData: GroupScheme,
     updateLoadingStatus: (Boolean) -> Unit,
+    onClick: ((UserScheme) -> Unit)? = null,
     modifier: Modifier
 ) {
     var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
     var removingMemberId by remember { mutableStateOf("") }
+    var groupMembers by remember { mutableStateOf(emptyList<UserScheme>()) }
 
     val db = Firebase.firestore
 
@@ -70,6 +73,36 @@ fun GroupMemberList(
             }
     }
 
+    fun <T> List<T>.chunkedSafe(size: Int = 10) = this.chunked(size)
+
+    fun fetchGroupMembersChunked(
+        memberIds: List<String>
+    ) {
+        val result = mutableListOf<UserScheme>()
+        updateLoadingStatus(true)
+
+        memberIds.chunkedSafe().forEach { chunk ->
+            db
+                .collection("users")
+                .whereIn(FieldPath.documentId(), chunk)
+                .get()
+                .addOnSuccessListener {
+                    result.addAll(it.toObjects(UserScheme::class.java))
+                    if (result.size >= memberIds.size) {
+                        groupMembers = result
+                    }
+                    updateLoadingStatus(false)
+                }
+                .addOnFailureListener {
+                    updateLoadingStatus(false)
+                }
+        }
+    }
+
+    LaunchedEffect(groupData.members) {
+        fetchGroupMembersChunked(groupData.members)
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -81,7 +114,9 @@ fun GroupMemberList(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
-                            onClick = {}
+                            onClick = {
+                                if (onClick != null) onClick(member)
+                            }
                         )
                         .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -118,7 +153,10 @@ fun GroupMemberList(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                if (groupData.createdBy == member.id) {
+                                if (
+                                    onClick == null &&
+                                    groupData.createdBy == member.id
+                                ) {
                                     Box(
                                         modifier = Modifier
                                             .background(
@@ -139,6 +177,7 @@ fun GroupMemberList(
                     }
 
                     if (
+                        onClick == null &&
                         currentUser?.uid == groupData.createdBy &&
                         currentUser?.uid != member.id
                     ) {

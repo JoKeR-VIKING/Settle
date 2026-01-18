@@ -17,6 +17,12 @@ enum class ExpenseCategory {
 }
 
 @IgnoreExtraProperties
+data class PaidBy(
+    val id: String = "",
+    val name: String = ""
+)
+
+@IgnoreExtraProperties
 data class ExpenseScheme(
     val id: String = "",
     val timestamp: Long = 0L,
@@ -24,5 +30,6 @@ data class ExpenseScheme(
     val amount: Double = 0.0,
     val category: String = ExpenseCategory.MISC.name,
     val paidFrom: String = "",
+    val paidBy: PaidBy? = null,
     val createdAt: Long = 0L
 )

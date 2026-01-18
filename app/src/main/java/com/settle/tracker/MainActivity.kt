@@ -47,16 +47,20 @@ sealed class Screen(val route: String) {
     object PhoneVerification : Screen("phone_verification")
     object Expenses : Screen("expenses")
     object Account : Screen("account")
-    object AddEditExpense : Screen("add_edit_expense?mode={mode}&expenseId={expenseId}") {
+    object AddEditExpense :
+        Screen("add_edit_expense?mode={mode}&expenseId={expenseId}&groupId={groupId}") {
         const val ARG_MODE = "mode"
         const val ARG_EXPENSE_ID = "expenseId"
+        const val ARG_GROUP_ID = "groupId"
 
         fun createRoute(
             mode: String,
-            expenseId: String? = null
+            expenseId: String? = null,
+            groupId: String? = null
         ) =
-            "add_edit_expense?mode=$mode&expenseId=$expenseId"
+            "add_edit_expense?&mode=$mode&expenseId=$expenseId&groupId=$groupId"
     }
+
     object Groups : Screen("groups")
     object GroupExpenses : Screen("group_expenses?groupId={groupId}") {
         const val ARG_GROUP_ID = "groupId"
@@ -261,15 +265,19 @@ private fun AppContent(
                     composable(Screen.Expenses.route) {
                         ExpensesScreen(
                             onAddExpense = {
-                                navController.navigate(Screen.AddEditExpense.createRoute("ADD")) {
+                                navController.navigate(
+                                    Screen.AddEditExpense.createRoute(
+                                        mode = "ADD"
+                                    )
+                                ) {
                                     launchSingleTop = true
                                 }
                             },
                             onEditExpense = { mode, expenseId ->
                                 navController.navigate(
                                     Screen.AddEditExpense.createRoute(
-                                        mode,
-                                        expenseId
+                                        mode = mode,
+                                        expenseId = expenseId
                                     )
                                 ) {
                                     launchSingleTop = true
@@ -304,6 +312,11 @@ private fun AppContent(
                                 type = NavType.StringType
                                 nullable = true
                                 defaultValue = null
+                            },
+                            navArgument(name = Screen.AddEditExpense.ARG_GROUP_ID) {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
                             }
                         )
                     ) { navBackStackEntry ->
@@ -314,6 +327,9 @@ private fun AppContent(
                         val expenseId = navBackStackEntry
                             .arguments
                             ?.getString(Screen.AddEditExpense.ARG_EXPENSE_ID)
+                        val groupId = navBackStackEntry
+                            .arguments
+                            ?.getString(Screen.AddEditExpense.ARG_GROUP_ID)
 
                         AddEditExpenseScreen(
                             onBack = {
@@ -321,7 +337,8 @@ private fun AppContent(
                             },
                             currentUser = currentUser!!,
                             mode = mode,
-                            expenseId = expenseId
+                            expenseId = expenseId,
+                            groupId = groupId
                         )
                     }
                     composable(Screen.Groups.route) {
@@ -356,7 +373,28 @@ private fun AppContent(
                             groupId = groupId!!,
                             onBack = {
                                 navController.popBackStack()
-                            }
+                            },
+                            onAddExpense = {
+                                navController.navigate(
+                                    Screen.AddEditExpense.createRoute(
+                                        mode = "ADD",
+                                        groupId = groupId
+                                    )
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onEditExpense = { mode, expenseId ->
+                                navController.navigate(
+                                    Screen.AddEditExpense.createRoute(
+                                        mode = mode,
+                                        expenseId = expenseId,
+                                        groupId = groupId
+                                    )
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            },
                         )
                     }
                 }

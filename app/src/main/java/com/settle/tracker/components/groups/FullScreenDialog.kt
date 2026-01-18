@@ -43,7 +43,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +56,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
-import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.ConfirmAlertDialog
@@ -87,7 +85,6 @@ fun FullScreenDialog(
 
     var isEditingGroupName by remember { mutableStateOf(false) }
     var isDeletingGroup by remember { mutableStateOf(false) }
-    var isRemovingMember by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
     fun updateGroupName() {
@@ -105,32 +102,6 @@ fun FullScreenDialog(
             .addOnFailureListener {
                 isEditingGroupName = false
             }
-    }
-
-    fun <T> List<T>.chunkedSafe(size: Int = 10) = this.chunked(size)
-
-    fun fetchGroupMembersChunked(
-        memberIds: List<String>
-    ) {
-        val result = mutableListOf<UserScheme>()
-        isLoading = true
-
-        memberIds.chunkedSafe().forEach { chunk ->
-            db
-                .collection("users")
-                .whereIn(FieldPath.documentId(), chunk)
-                .get()
-                .addOnSuccessListener {
-                    result.addAll(it.toObjects(UserScheme::class.java))
-                    if (result.size >= memberIds.size) {
-                        groupMembers = result
-                    }
-                    isLoading = false
-                }
-                .addOnFailureListener {
-                    isLoading = false
-                }
-        }
     }
 
     fun normalizePhoneNumber(raw: String): String? {
@@ -243,10 +214,6 @@ fun FullScreenDialog(
         isLoading = true
 
         addMemberToGroup(phoneNumber)
-    }
-
-    LaunchedEffect(groupData.members) {
-        fetchGroupMembersChunked(groupData.members)
     }
 
     LoadingScreenWrapper(
@@ -407,7 +374,6 @@ fun FullScreenDialog(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             GroupMemberList(
-                                groupMembers = groupMembers,
                                 groupData = groupData,
                                 updateLoadingStatus = {
                                     isLoading = it

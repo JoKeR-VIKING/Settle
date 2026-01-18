@@ -186,7 +186,7 @@ fun ExpenseRow(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "paid via ${expense.paidFrom}",
+                                text = if (expense.paidBy == null) "paid via ${expense.paidFrom}" else "paid by ${expense.paidBy.name}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 letterSpacing = 0.3.sp,

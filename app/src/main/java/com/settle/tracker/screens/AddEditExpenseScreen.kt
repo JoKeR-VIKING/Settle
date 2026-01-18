@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Money
 import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.Person4
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -71,6 +72,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -85,8 +87,11 @@ import com.google.firebase.firestore.firestore
 import com.settle.tracker.AppDatabase
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.MultiDigitTextField
+import com.settle.tracker.components.groups.GroupMemberList
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.scheme.GroupScheme
+import com.settle.tracker.scheme.PaidBy
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
 import com.settle.tracker.utils.getExpenseCategoryColor
@@ -110,6 +115,7 @@ fun AddEditExpenseScreen(
     currentUser: FirebaseUser,
     mode: String,
     expenseId: String? = null,
+    groupId: String? = null
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -126,6 +132,9 @@ fun AddEditExpenseScreen(
         skipPartiallyExpanded = false
     )
 
+    var groupName by remember { mutableStateOf("") }
+    var groupData by remember { mutableStateOf(GroupScheme()) }
+
     var id by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var smsExpenseId by remember { mutableStateOf(expenseId) }
     var expenseDescription by remember { mutableStateOf(TextFieldValue("")) }
@@ -134,6 +143,7 @@ fun AddEditExpenseScreen(
     var dateText by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(ExpenseCategory.MISC) }
     var paidFrom by remember { mutableStateOf("") }
+    var paidBy by remember { mutableStateOf<PaidBy?>(null) }
     var selectedIndex by remember { mutableIntStateOf(-1) }
     var lastFourDigits by remember { mutableStateOf("") }
 
@@ -168,7 +178,8 @@ fun AddEditExpenseScreen(
     fun checkFieldsArePopulated(): Boolean {
         return (expenseDescription.text.isNotBlank() &&
             amount.isNotBlank() &&
-            dateText.isNotBlank())
+            dateText.isNotBlank() &&
+            (groupId == null || paidBy != null))
     }
 
     fun submitExpense() {
@@ -184,13 +195,21 @@ fun AddEditExpenseScreen(
                 "category" to category.name,
             )
 
+            if (paidBy != null) {
+                expenseMap.remove("paidFrom")
+                expenseMap["paidBy"] = mapOf(
+                    "id" to (paidBy?.id ?: ""),
+                    "name" to (paidBy?.name ?: "")
+                )
+            }
+
             if (mode != "EDIT") {
                 expenseMap["createdAt"] = System.currentTimeMillis()
             }
 
             db
-                .collection("users")
-                .document(currentUser.uid)
+                .collection(if (groupId == null) "users" else "groups")
+                .document(groupId ?: currentUser.uid)
                 .collection("expenses")
                 .document(id)
                 .set(expenseMap, SetOptions.merge())
@@ -219,8 +238,8 @@ fun AddEditExpenseScreen(
         isFetchingExpense = true
 
         db
-            .collection("users")
-            .document(currentUser.uid)
+            .collection(if (groupId == null) "users" else "groups")
+            .document(groupId ?: currentUser.uid)
             .collection("expenses")
             .document(expenseId)
             .get()
@@ -312,10 +331,30 @@ fun AddEditExpenseScreen(
         }
     }
 
+    LaunchedEffect(groupId) {
+        if (groupId == null) return@LaunchedEffect
+
+        db
+            .collection("groups")
+            .document(groupId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("Firestore", "${error.message}")
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val data = snapshot.toObject(GroupScheme::class.java)
+                    groupData = data ?: GroupScheme()
+                    groupName = data?.groupName ?: ""
+                }
+            }
+    }
+
     LaunchedEffect(Unit) {
         db
-            .collection("users")
-            .document(currentUser.uid)
+            .collection(if (groupId == null) "users" else "groups")
+            .document(groupId ?: currentUser.uid)
             .collection("expenses")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(50)
@@ -356,22 +395,25 @@ fun AddEditExpenseScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = onBack
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            modifier = Modifier.size(30.dp),
-                            imageVector = Icons.Filled.ChevronLeft,
-                            contentDescription = "Go Back"
+                        IconButton(
+                            onClick = onBack
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(25.dp),
+                                imageVector = Icons.Filled.ChevronLeft,
+                                contentDescription = "Go Back"
+                            )
+                        }
+
+                        Text(
+                            if (mode == "EDIT") "Edit Expense" else "Add Expense",
+                            style = MaterialTheme.typography.labelLarge,
+                            letterSpacing = 0.5.sp,
                         )
                     }
-
-                    Text(
-                        if (mode == "EDIT") "Edit Expense" else "Add Expense",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontSize = 18.sp,
-                        letterSpacing = 0.5.sp,
-                    )
 
                     Box(
                         modifier = Modifier
@@ -380,8 +422,13 @@ fun AddEditExpenseScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Personal",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = if (groupId != null) groupName else "Personal",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
                         )
                     }
                 }
@@ -536,11 +583,11 @@ fun AddEditExpenseScreen(
                         shape = RoundedCornerShape(15),
                         label = {
                             Text(
-                                "Payment Method",
+                                text = if (groupId == null) "Payment Method" else "Paid By",
                                 style = MaterialTheme.typography.labelLarge
                             )
                         },
-                        value = paidFrom,
+                        value = if (groupId == null) paidFrom else paidBy?.name ?: "",
                         onValueChange = {},
                         readOnly = true,
                         keyboardOptions = KeyboardOptions(
@@ -550,14 +597,14 @@ fun AddEditExpenseScreen(
                         singleLine = true,
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Filled.Paid,
-                                contentDescription = "Paid From"
+                                imageVector = if (groupId == null) Icons.Filled.Paid else Icons.Filled.Person4,
+                                contentDescription = if (groupId == null) "Paid From" else "Paid By"
                             )
                         },
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Filled.ArrowDropDown,
-                                contentDescription = "Select Paid From"
+                                contentDescription = if (groupId == null) "Select Paid From" else "Select Paid By"
                             )
                         }
                     )
@@ -652,173 +699,201 @@ fun AddEditExpenseScreen(
                         }
                     }
                 } else if (showPaidFromModal) {
-                    ModalBottomSheet(
-                        sheetState = paidFromSheetState,
-                        onDismissRequest = {
-                            showPaidFromModal = false
-
-                            when {
-                                paidFrom.contains("Card") -> {
-                                    selectedIndex = 0
-                                    lastFourDigits = paidFrom.takeLast(4)
-                                }
-
-                                paidFrom.contains("Bank A/C") -> {
-                                    selectedIndex = 1
-                                    lastFourDigits = paidFrom.takeLast(4)
-                                }
-
-                                paidFrom.contains("Wallet") -> {
-                                    selectedIndex = 2
-                                    lastFourDigits = ""
-                                }
-
-                                else -> {
-                                    selectedIndex = -1
-                                    lastFourDigits = ""
-                                }
+                    if (groupId != null) {
+                        ModalBottomSheet(
+                            modifier = Modifier.padding(16.dp),
+                            sheetState = paidFromSheetState,
+                            onDismissRequest = {
+                                showPaidFromModal = false
                             }
-                        },
-                        dragHandle = { BottomSheetDefaults.DragHandle() }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .defaultMinSize(minHeight = partialHeight),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceAround
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(0.95f),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            pagerState.animateScrollToPage(
-                                                (pagerState.currentPage - 1).coerceAtLeast(0)
-                                            )
-                                        }
-                                    },
-                                    enabled = pagerState.currentPage > 0
-                                ) {
-                                    Icon(Icons.Filled.ChevronLeft, contentDescription = "Previous")
-                                }
-
-                                HorizontalPager(
-                                    modifier = Modifier.weight(1f),
-                                    state = pagerState,
-                                ) { pageIndex ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        SingleChoiceSegmentedButtonRow(
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            paymentPages[pageIndex].forEachIndexed { index, label ->
-                                                SegmentedButton(
-                                                    label = {
-                                                        Text(
-                                                            text = label,
-                                                            style = MaterialTheme.typography.labelMedium,
-                                                            maxLines = 2,
-                                                            textAlign = TextAlign.Center
-                                                        )
-                                                    },
-                                                    shape = SegmentedButtonDefaults.itemShape(
-                                                        index = index,
-                                                        count = paymentPages[pageIndex].size
-                                                    ),
-                                                    selected = paidFrom == label,
-                                                    onClick = {
-                                                        paidFrom = label
-                                                        showPaidFromModal = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            pagerState.animateScrollToPage(
-                                                (pagerState.currentPage + 1).coerceAtMost(pagerState.pageCount - 1)
-                                            )
-                                        }
-                                    },
-                                    enabled = pagerState.currentPage < pagerState.pageCount - 1
-                                ) {
-                                    Icon(Icons.Filled.ChevronRight, contentDescription = "Next")
-                                }
-                            }
-
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                SingleChoiceSegmentedButtonRow(
-                                    modifier = Modifier.fillMaxWidth(0.9f)
-                                ) {
-                                    options.forEachIndexed { index, label ->
-                                        SegmentedButton(
-                                            label = {
-                                                Text(
-                                                    text = label.name,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    maxLines = 1,
-                                                )
-                                            },
-                                            icon = {
-                                                Icon(
-                                                    imageVector = label.icon,
-                                                    contentDescription = label.name
-                                                )
-                                            },
-                                            shape = SegmentedButtonDefaults.itemShape(
-                                                index = index,
-                                                count = options.size
-                                            ),
-                                            selected = selectedIndex == index,
-                                            onClick = {
-                                                selectedIndex = index
-                                                lastFourDigits = ""
-                                            }
-                                        )
-                                    }
-                                }
-
-                                MultiDigitTextField(
-                                    numberOfDigits = 4,
-                                    lastFourDigits,
-                                    onValueChange = {
-                                        lastFourDigits = it
-                                    },
-                                    isVisible = selectedIndex in 0..1,
-                                    helperText = if (selectedIndex in 0..1) "Enter the last 4 digits of your ${options[selectedIndex].name}" else ""
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    paidFrom = "${options[selectedIndex].name} $lastFourDigits"
+                            GroupMemberList(
+                                groupData = groupData,
+                                updateLoadingStatus = {},
+                                onClick = { user ->
+                                    paidBy = PaidBy(
+                                        id = user.id,
+                                        name = user.name
+                                    )
                                     showPaidFromModal = false
                                 },
-                                modifier = Modifier.fillMaxWidth(0.9f),
-                                shape = RoundedCornerShape(25),
-                                enabled = if (selectedIndex in 0..1) lastFourDigits.length == 4 else selectedIndex != -1
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    } else {
+                        ModalBottomSheet(
+                            sheetState = paidFromSheetState,
+                            onDismissRequest = {
+                                showPaidFromModal = false
+
+                                when {
+                                    paidFrom.contains("Card") -> {
+                                        selectedIndex = 0
+                                        lastFourDigits = paidFrom.takeLast(4)
+                                    }
+
+                                    paidFrom.contains("Bank A/C") -> {
+                                        selectedIndex = 1
+                                        lastFourDigits = paidFrom.takeLast(4)
+                                    }
+
+                                    paidFrom.contains("Wallet") -> {
+                                        selectedIndex = 2
+                                        lastFourDigits = ""
+                                    }
+
+                                    else -> {
+                                        selectedIndex = -1
+                                        lastFourDigits = ""
+                                    }
+                                }
+                            },
+                            dragHandle = { BottomSheetDefaults.DragHandle() }
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .defaultMinSize(minHeight = partialHeight),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.SpaceAround
                             ) {
-                                Text(
-                                    "Confirm",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    letterSpacing = 0.5.sp
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(0.95f),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            scope.launch {
+                                                pagerState.animateScrollToPage(
+                                                    (pagerState.currentPage - 1).coerceAtLeast(0)
+                                                )
+                                            }
+                                        },
+                                        enabled = pagerState.currentPage > 0
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.ChevronLeft,
+                                            contentDescription = "Previous"
+                                        )
+                                    }
+
+                                    HorizontalPager(
+                                        modifier = Modifier.weight(1f),
+                                        state = pagerState,
+                                    ) { pageIndex ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            SingleChoiceSegmentedButtonRow(
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                paymentPages[pageIndex].forEachIndexed { index, label ->
+                                                    SegmentedButton(
+                                                        label = {
+                                                            Text(
+                                                                text = label,
+                                                                style = MaterialTheme.typography.labelMedium,
+                                                                maxLines = 2,
+                                                                textAlign = TextAlign.Center
+                                                            )
+                                                        },
+                                                        shape = SegmentedButtonDefaults.itemShape(
+                                                            index = index,
+                                                            count = paymentPages[pageIndex].size
+                                                        ),
+                                                        selected = paidFrom == label,
+                                                        onClick = {
+                                                            paidFrom = label
+                                                            showPaidFromModal = false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            scope.launch {
+                                                pagerState.animateScrollToPage(
+                                                    (pagerState.currentPage + 1).coerceAtMost(
+                                                        pagerState.pageCount - 1
+                                                    )
+                                                )
+                                            }
+                                        },
+                                        enabled = pagerState.currentPage < pagerState.pageCount - 1
+                                    ) {
+                                        Icon(Icons.Filled.ChevronRight, contentDescription = "Next")
+                                    }
+                                }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    SingleChoiceSegmentedButtonRow(
+                                        modifier = Modifier.fillMaxWidth(0.9f)
+                                    ) {
+                                        options.forEachIndexed { index, label ->
+                                            SegmentedButton(
+                                                label = {
+                                                    Text(
+                                                        text = label.name,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        maxLines = 1,
+                                                    )
+                                                },
+                                                icon = {
+                                                    Icon(
+                                                        imageVector = label.icon,
+                                                        contentDescription = label.name
+                                                    )
+                                                },
+                                                shape = SegmentedButtonDefaults.itemShape(
+                                                    index = index,
+                                                    count = options.size
+                                                ),
+                                                selected = selectedIndex == index,
+                                                onClick = {
+                                                    selectedIndex = index
+                                                    lastFourDigits = ""
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    MultiDigitTextField(
+                                        numberOfDigits = 4,
+                                        lastFourDigits,
+                                        onValueChange = {
+                                            lastFourDigits = it
+                                        },
+                                        isVisible = selectedIndex in 0..1,
+                                        helperText = if (selectedIndex in 0..1) "Enter the last 4 digits of your ${options[selectedIndex].name}" else ""
+                                    )
+                                }
+
+                                Button(
+                                    onClick = {
+                                        paidFrom = "${options[selectedIndex].name} $lastFourDigits"
+                                        showPaidFromModal = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth(0.9f),
+                                    shape = RoundedCornerShape(25),
+                                    enabled = if (selectedIndex in 0..1) lastFourDigits.length == 4 else selectedIndex != -1
+                                ) {
+                                    Text(
+                                        "Confirm",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
                             }
                         }
                     }
