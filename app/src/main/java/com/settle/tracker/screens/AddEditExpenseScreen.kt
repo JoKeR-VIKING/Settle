@@ -191,7 +191,8 @@ fun AddEditExpenseScreen(
 
                         id = expense.id
                         expenseDescription = TextFieldValue(expense.details)
-                        amount = expense.amount.toString()
+                        amount = String.format("%.2f", expense.amount)
+                        displayAmount = formatCurrency(expense.amount)
                         category = ExpenseCategory.valueOf(expense.category)
                         paidFrom = expense.paidFrom
                         paidBy = expense.paidBy
@@ -208,7 +209,8 @@ fun AddEditExpenseScreen(
                 val expense = expenseDao.getOne(expenseId).first()
                 if (expense != null) {
                     expenseDescription = TextFieldValue(expense.details)
-                    amount = expense.amount.toString()
+                    amount = String.format("%.2f", expense.amount)
+                    displayAmount = formatCurrency(expense.amount)
                     category = ExpenseCategory.valueOf(expense.category)
                     paidFrom = expense.paidFrom
                     datePickerState.selectedDateMillis = expense.timestamp
