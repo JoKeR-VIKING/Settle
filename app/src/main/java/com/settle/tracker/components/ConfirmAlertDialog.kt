@@ -21,7 +21,9 @@ fun ConfirmAlertDialog(
     text: String,
     subText: String,
     onConfirm: () -> Unit,
-    toggleAlert: () -> Unit
+    toggleAlert: () -> Unit,
+    confirmText: String = "Delete",
+    confirmColor: Color = MaterialTheme.colorScheme.error
 ) {
     AlertDialog(
         onDismissRequest = toggleAlert,
@@ -53,12 +55,12 @@ fun ConfirmAlertDialog(
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
+                    containerColor = confirmColor,
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 )
             ) {
                 Text(
-                    "Delete",
+                    confirmText,
                     style = MaterialTheme.typography.labelMedium,
                 )
             }

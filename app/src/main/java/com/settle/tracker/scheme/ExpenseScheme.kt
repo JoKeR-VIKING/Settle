@@ -11,7 +11,8 @@ enum class ExpenseCategory {
     SUBSCRIPTION,
     HEALTH,
     TRAVEL,
-    MISC;
+    MISC,
+    SETTLEMENT;
 
     fun getDisplayName() = this.name.lowercase().replaceFirstChar { it.uppercase() }
 }

@@ -24,12 +24,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.settle.tracker.AppDatabase
 import com.settle.tracker.components.ConfirmAlertDialog
+import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
@@ -61,9 +63,9 @@ fun ExpenseRow(
         return if (expense.paidBy.isEmpty()) {
             "paid via ${expense.paidFrom}"
         } else if (expense.paidBy.size == 1) {
-            "paid by ${expense.paidBy.first().name}"
+            "${expense.paidBy.first().name} paid ${formatCurrency(expense.amount)}"
         } else {
-            "paid by multiple people"
+            "multiple people paid ${formatCurrency(expense.amount)}"
         }
     }
 
@@ -85,6 +87,7 @@ fun ExpenseRow(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {
+                    if (expense.category == ExpenseCategory.SETTLEMENT.name) return@combinedClickable
                     if (expense.id.isBlank()) toggleSmsModal()
 
                     onEditExpense(
@@ -142,6 +145,8 @@ fun ExpenseRow(
                             expense.details,
                             style = MaterialTheme.typography.labelLarge,
                             letterSpacing = 0.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         Row(
@@ -150,10 +155,12 @@ fun ExpenseRow(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
+                                modifier = Modifier.weight(1f),
                                 text = getExpenseSubText(),
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 letterSpacing = 0.3.sp,
+                                maxLines = 1
                             )
 
                             Text(

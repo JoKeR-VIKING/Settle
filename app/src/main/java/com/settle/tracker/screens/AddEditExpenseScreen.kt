@@ -136,7 +136,8 @@ fun AddEditExpenseScreen(
             dateText.isNotBlank() &&
             (groupId == null || paidBy.isNotEmpty())) &&
             (groupId == null || splits.isNotEmpty()) &&
-            (groupId == null || splits.sumOf { it.amount } == amount.toDoubleOrNull())
+            (groupId == null || splits.sumOf { it.amount } == amount.toDoubleOrNull()) &&
+            (groupId == null || paidBy.sumOf { it.amount } == amount.toDoubleOrNull())
     }
 
     fun submitExpense() {

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Subscriptions
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.Dp
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
@@ -47,6 +49,7 @@ fun formatCurrency(amount: Double): String {
     return formatter.format(amount)
 }
 
+@Composable
 fun getExpenseCategoryIcon(expenseCategory: String): ImageVector {
     val category = try {
         ExpenseCategory.valueOf(expenseCategory)
@@ -64,6 +67,9 @@ fun getExpenseCategoryIcon(expenseCategory: String): ImageVector {
         ExpenseCategory.HEALTH -> Icons.Filled.MonitorHeart
         ExpenseCategory.TRAVEL -> Icons.Filled.Luggage
         ExpenseCategory.MISC -> Icons.Filled.Category
+        ExpenseCategory.SETTLEMENT -> ImageVector.vectorResource(
+            id = R.drawable.money_bag
+        )
     }
 }
 
@@ -84,6 +90,7 @@ fun getExpenseCategoryLargeIcon(expenseCategory: String): Int {
         ExpenseCategory.HEALTH -> R.drawable.ic_health
         ExpenseCategory.TRAVEL -> R.drawable.ic_travel
         ExpenseCategory.MISC -> R.drawable.ic_misc
+        ExpenseCategory.SETTLEMENT -> R.drawable.money_bag
     }
 }
 
@@ -104,6 +111,7 @@ fun getExpenseCategoryColor(expenseCategory: String): Color {
         ExpenseCategory.HEALTH -> Color(0xFF1565C0)
         ExpenseCategory.TRAVEL -> Color(0xFF7B3F00)
         ExpenseCategory.MISC -> Color(0xFF546E7A)
+        ExpenseCategory.SETTLEMENT -> Color(0xFFFFB300)
     }
 }
 

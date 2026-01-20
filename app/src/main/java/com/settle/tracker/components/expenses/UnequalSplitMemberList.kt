@@ -22,11 +22,11 @@ fun UnequalSplitMemberList(
     splits: List<SplitParticipant>,
     onSplitsChange: (List<SplitParticipant>) -> Unit
 ) {
-    val splitsMap = remember {
+    val splitsMap = remember(splits) {
         splits.associate { it.id to it.amount.toString() }
     }
 
-    var amountsMap by remember {
+    var amountsMap by remember(groupMembers, splitsMap) {
         mutableStateOf(
             groupMembers.associate { member ->
                 member.id to (splitsMap[member.id] ?: "")

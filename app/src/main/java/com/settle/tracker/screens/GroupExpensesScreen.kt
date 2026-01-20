@@ -38,6 +38,7 @@ import com.settle.tracker.components.FabMenu
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.common.FabOverlay
 import com.settle.tracker.components.expenses.ExpenseTable
+import com.settle.tracker.components.groups.BalanceList
 import com.settle.tracker.components.groups.FullScreenDialog
 import com.settle.tracker.components.groups.GroupTabRow
 import com.settle.tracker.scheme.ExpenseScheme
@@ -251,7 +252,10 @@ fun GroupExpensesScreen(
                         )
                     }
                 } else {
-                    Text("Balances")
+                    BalanceList(
+                        groupData = groupData,
+                        expenses = expenses
+                    )
                 }
             }
 

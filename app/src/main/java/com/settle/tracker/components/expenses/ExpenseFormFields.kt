@@ -325,17 +325,29 @@ fun SplitModeField(
         }
     }
 
-    LaunchedEffect(totalAmount) {
-        if (splitMode == SplitMode.EQUAL) {
-            onSplitsChange(
-                recalculateEqualSplit(
-                    groupMembers = groupMembers,
-                    selectedUserIds = selectedUserIds,
-                    totalAmount = totalAmount
-                ),
-                splitMode
-            )
-        }
+    LaunchedEffect(
+        totalAmount,
+        splitMode,
+        selectedUserIds,
+        groupMembers,
+        isSplitHydrated
+    ) {
+        if (
+            !isSplitHydrated ||
+            splitMode != SplitMode.EQUAL ||
+            groupMembers.isEmpty() ||
+            selectedUserIds.isEmpty() ||
+            totalAmount <= 0
+        ) return@LaunchedEffect
+
+        onSplitsChange(
+            recalculateEqualSplit(
+                groupMembers = groupMembers,
+                selectedUserIds = selectedUserIds,
+                totalAmount = totalAmount
+            ),
+            splitMode
+        )
     }
 
     LaunchedEffect(splitMode) {
