@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.settle.tracker.AppDatabase
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.scheme.ExpenseScheme
@@ -33,6 +36,7 @@ import com.settle.tracker.utils.formatTimestamp
 import com.settle.tracker.utils.getExpenseCategoryColor
 import com.settle.tracker.utils.getExpenseCategoryIcon
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,6 +54,31 @@ fun ExpenseRow(
     val expenseDao = AppDatabase
         .getInstance(context)
         .expenseDraftDao()
+
+    var balanceAmount by remember { mutableStateOf(0.0) }
+
+    fun getExpenseSubText(): String {
+        return if (expense.paidBy.isEmpty()) {
+            "paid via ${expense.paidFrom}"
+        } else if (expense.paidBy.size == 1) {
+            "paid by ${expense.paidBy.first().name}"
+        } else {
+            "paid by multiple people"
+        }
+    }
+
+    LaunchedEffect(expense.splits) {
+        if (expense.splits.isEmpty()) return@LaunchedEffect
+
+        val splits = expense.splits
+        val payers = expense.paidBy
+        val currentUser = Firebase.auth.currentUser
+
+        val mySplit = splits.firstOrNull { it.id == currentUser?.uid }?.amount ?: 0.0
+        val myPaid = payers.firstOrNull { it.id == currentUser?.uid }?.amount ?: 0.0
+
+        balanceAmount = myPaid - mySplit
+    }
 
     Row(
         modifier = Modifier
@@ -121,16 +150,26 @@ fun ExpenseRow(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (expense.paidBy == null) "paid via ${expense.paidFrom}" else "paid by ${expense.paidBy.name}",
+                                text = getExpenseSubText(),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 letterSpacing = 0.3.sp,
                             )
 
                             Text(
-                                formatCurrency(expense.amount),
+                                text = when {
+                                    expense.paidBy.isNotEmpty() -> formatCurrency(balanceAmount.absoluteValue)
+                                    else -> formatCurrency(expense.amount)
+                                },
                                 style = MaterialTheme.typography.labelLarge,
                                 letterSpacing = 0.3.sp,
+                                color = when {
+                                    expense.paidBy.isNotEmpty() -> {
+                                        if (balanceAmount >= 0.0) MaterialTheme.colorScheme.surfaceBright
+                                        else MaterialTheme.colorScheme.error
+                                    }
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                },
                             )
                         }
                     }

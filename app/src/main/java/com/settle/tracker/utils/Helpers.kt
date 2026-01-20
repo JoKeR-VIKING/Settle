@@ -18,8 +18,11 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FirebaseFirestore
 import com.settle.tracker.R
 import com.settle.tracker.scheme.ExpenseCategory
+import com.settle.tracker.scheme.UserScheme
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
@@ -153,5 +156,34 @@ fun parsePaymentMethod(paidFrom: String): PaymentMethodInfo {
             selectedIndex = -1,
             lastFourDigits = ""
         )
+    }
+}
+
+fun <T> List<T>.chunkedSafe(size: Int = 10) = this.chunked(size)
+
+fun fetchGroupMembersChunked(
+    memberIds: List<String>,
+    updateLoadingStatus: (Boolean) -> Unit,
+    db: FirebaseFirestore,
+    updateGroupMembers: (List<UserScheme>) -> Unit
+) {
+    val result = mutableListOf<UserScheme>()
+    updateLoadingStatus(true)
+
+    memberIds.chunkedSafe().forEach { chunk ->
+        db
+            .collection("users")
+            .whereIn(FieldPath.documentId(), chunk)
+            .get()
+            .addOnSuccessListener {
+                result.addAll(it.toObjects(UserScheme::class.java))
+                if (result.size >= memberIds.size) {
+                    updateGroupMembers(result)
+                }
+                updateLoadingStatus(false)
+            }
+            .addOnFailureListener {
+                updateLoadingStatus(false)
+            }
     }
 }

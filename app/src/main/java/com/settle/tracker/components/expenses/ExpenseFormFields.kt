@@ -1,6 +1,8 @@
 package com.settle.tracker.components.expenses
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,14 +19,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import com.settle.tracker.scheme.ExpenseCategory
-import com.settle.tracker.scheme.PaidBy
+import com.settle.tracker.scheme.GroupScheme
+import com.settle.tracker.scheme.SplitMode
+import com.settle.tracker.scheme.SplitParticipant
+import com.settle.tracker.scheme.UserScheme
+import com.settle.tracker.utils.fetchGroupMembersChunked
+import com.settle.tracker.utils.recalculateEqualSplit
+import kotlinx.coroutines.delay
 
 const val MAX_DESCRIPTION_CHARS = 30
 
@@ -190,7 +207,7 @@ fun PaymentMethodField(
     modifier: Modifier = Modifier,
     isGroupExpense: Boolean,
     paidFrom: String,
-    paidBy: PaidBy?,
+    paidBy: List<SplitParticipant>,
     onFocus: () -> Unit
 ) {
     OutlinedTextField(
@@ -209,7 +226,15 @@ fun PaymentMethodField(
                 style = MaterialTheme.typography.labelLarge
             )
         },
-        value = if (isGroupExpense) paidBy?.name ?: "" else paidFrom,
+        value = (
+            if (isGroupExpense) {
+                if (paidBy.isEmpty()) ""
+                else if (paidBy.size == 1) paidBy.first().name
+                else "Multiple"
+            } else {
+                paidFrom
+            }
+        ),
         onValueChange = {},
         readOnly = true,
         keyboardOptions = KeyboardOptions(
@@ -230,4 +255,155 @@ fun PaymentMethodField(
             )
         }
     )
+}
+
+@Composable
+fun SplitModeField(
+    modifier: Modifier = Modifier,
+    groupData: GroupScheme,
+    selectedSplitMode: SplitMode,
+    splits: List<SplitParticipant>,
+    onSplitsChange: (List<SplitParticipant>, SplitMode) -> Unit,
+    amount: String,
+    mode: String
+) {
+    var totalAmount by remember { mutableDoubleStateOf(0.0) }
+    var prevSplitMode by remember { mutableStateOf(selectedSplitMode) }
+    var splitMode by remember { mutableStateOf(selectedSplitMode) }
+    var selectedUserIds by remember { mutableStateOf(emptySet<String>()) }
+    var groupMembers by remember { mutableStateOf(emptyList<UserScheme>()) }
+    var isSplitHydrated by remember { mutableStateOf(false) }
+
+    val db = Firebase.firestore
+
+    val onTabSelected: (SplitMode) -> Unit = {
+        splitMode = it
+    }
+
+    LaunchedEffect(selectedSplitMode) {
+        splitMode = selectedSplitMode
+        prevSplitMode = selectedSplitMode
+    }
+
+    LaunchedEffect(groupData.members) {
+        fetchGroupMembersChunked(
+            memberIds = groupData.members,
+            updateLoadingStatus = {},
+            db = db,
+            updateGroupMembers = {
+                groupMembers = it
+            }
+        )
+    }
+
+    LaunchedEffect(
+        groupData.members,
+        splits,
+        mode
+    ) {
+        if (isSplitHydrated) return@LaunchedEffect
+
+        when {
+            mode == "EDIT" && splits.isNotEmpty() -> {
+                selectedUserIds = splits.map { it.id }.toSet()
+                isSplitHydrated = true
+            }
+
+            mode != "EDIT" && groupData.members.isNotEmpty() -> {
+                selectedUserIds = groupData.members.toSet()
+                isSplitHydrated = true
+            }
+        }
+    }
+
+    LaunchedEffect(amount) {
+        if (amount.isBlank()) return@LaunchedEffect
+
+        delay(400)
+        amount.toDoubleOrNull()?.let {
+            totalAmount = it
+        }
+    }
+
+    LaunchedEffect(totalAmount) {
+        if (splitMode == SplitMode.EQUAL) {
+            onSplitsChange(
+                recalculateEqualSplit(
+                    groupMembers = groupMembers,
+                    selectedUserIds = selectedUserIds,
+                    totalAmount = totalAmount
+                ),
+                splitMode
+            )
+        }
+    }
+
+    LaunchedEffect(splitMode) {
+        if (
+            splitMode != prevSplitMode &&
+            prevSplitMode == SplitMode.UNEQUAL
+        ) {
+            selectedUserIds = groupData.members.toSet()
+            onSplitsChange(
+                recalculateEqualSplit(
+                    groupMembers = groupMembers,
+                    selectedUserIds = selectedUserIds,
+                    totalAmount = totalAmount
+                ),
+                splitMode
+            )
+        }
+
+        prevSplitMode = splitMode
+    }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        SplitModeTabRow(
+            splitMode = splitMode,
+            onTabSelected = onTabSelected
+        )
+
+        if (splitMode == SplitMode.EQUAL) {
+            EqualSplitMemberList(
+                groupMembers = groupMembers,
+                selectedUserIds = selectedUserIds,
+                splits = splits,
+                onMemberSelectionChange = { memberId ->
+                    selectedUserIds = if (memberId in selectedUserIds) {
+                        if (selectedUserIds.size > 1) {
+                            selectedUserIds - memberId
+                        } else {
+                            selectedUserIds
+                        }
+                    } else {
+                        selectedUserIds + memberId
+                    }
+
+                    onSplitsChange(
+                        recalculateEqualSplit(
+                            groupMembers = groupMembers,
+                            selectedUserIds = selectedUserIds,
+                            totalAmount = totalAmount
+                        ),
+                        splitMode
+                    )
+                }
+            )
+        } else {
+            UnequalSplitMemberList(
+                groupMembers = groupMembers,
+                splits = splits,
+                onSplitsChange = { updatedSplits ->
+                    onSplitsChange(
+                        updatedSplits,
+                        splitMode
+                    )
+                }
+            )
+        }
+    }
 }

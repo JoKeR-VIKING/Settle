@@ -16,10 +16,16 @@ enum class ExpenseCategory {
     fun getDisplayName() = this.name.lowercase().replaceFirstChar { it.uppercase() }
 }
 
+enum class SplitMode {
+    EQUAL,
+    UNEQUAL
+}
+
 @IgnoreExtraProperties
-data class PaidBy(
+data class SplitParticipant(
     val id: String = "",
-    val name: String = ""
+    val name: String = "",
+    val amount: Double = 0.0
 )
 
 @IgnoreExtraProperties
@@ -30,6 +36,8 @@ data class ExpenseScheme(
     val amount: Double = 0.0,
     val category: String = ExpenseCategory.MISC.name,
     val paidFrom: String = "",
-    val paidBy: PaidBy? = null,
+    val paidBy: List<SplitParticipant> = emptyList(),
+    val splitMode: String = SplitMode.EQUAL.name,
+    val splits: List<SplitParticipant> = emptyList(),
     val createdAt: Long = 0L
 )

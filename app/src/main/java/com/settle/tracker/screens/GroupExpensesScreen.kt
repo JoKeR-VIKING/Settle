@@ -42,7 +42,7 @@ import com.settle.tracker.components.groups.FullScreenDialog
 import com.settle.tracker.components.groups.GroupTabRow
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
-import com.settle.tracker.scheme.PaidBy
+import com.settle.tracker.scheme.SplitParticipant
 
 enum class GroupTab {
     EXPENSES,
@@ -125,13 +125,27 @@ fun GroupExpensesScreen(
 
                 if (snapShot != null) {
                     expenses = snapShot.documents.mapNotNull { doc ->
-                        val paidByMap = doc.get("paidBy") as? Map<*, *>
-                        val paidBy = paidByMap?.let {
-                            PaidBy(
-                                id = it["id"] as? String ?: "",
-                                name = it["name"] as? String ?: ""
+                        val paidByList = doc.get("paidBy") as? List<*>
+                        val paidBy = paidByList?.mapNotNull { item ->
+                            val paidByMap = item as? Map<*, *> ?: return@mapNotNull null
+
+                            SplitParticipant(
+                                id = paidByMap["id"] as? String ?: return@mapNotNull null,
+                                name = paidByMap["name"] as? String ?: "",
+                                amount = (paidByMap["amount"] as? Number)?.toDouble() ?: 0.0
                             )
-                        }
+                        } ?: emptyList()
+
+                        val splitsList = doc.get("splits") as? List<*>
+                        val splits = splitsList?.mapNotNull { item ->
+                            val splitMap = item as? Map<*, *> ?: return@mapNotNull null
+
+                            SplitParticipant(
+                                id = splitMap["id"] as? String ?: return@mapNotNull null,
+                                name = splitMap["name"] as? String ?: "",
+                                amount = (splitMap["amount"] as? Number)?.toDouble() ?: 0.0
+                            )
+                        } ?: emptyList()
 
                         ExpenseScheme(
                             id = doc.getString("id") ?: "",
@@ -140,6 +154,7 @@ fun GroupExpensesScreen(
                             amount = doc.getDouble("amount") ?: 0.0,
                             category = doc.getString("category") ?: "",
                             paidBy = paidBy,
+                            splits = splits,
                             createdAt = doc.getLong("createdAt") ?: 0L
                         )
                     }

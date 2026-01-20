@@ -9,12 +9,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -59,10 +58,13 @@ import com.settle.tracker.components.expenses.DescriptionField
 import com.settle.tracker.components.expenses.GroupMemberPickerModal
 import com.settle.tracker.components.expenses.PaymentMethodField
 import com.settle.tracker.components.expenses.PaymentMethodPickerModal
+import com.settle.tracker.components.expenses.SplitModeField
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
-import com.settle.tracker.scheme.PaidBy
+import com.settle.tracker.scheme.SplitMode
+import com.settle.tracker.scheme.SplitParticipant
+import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
 import kotlinx.coroutines.delay
@@ -92,7 +94,8 @@ fun AddEditExpenseScreen(
     val categoryPickerSheetState = rememberModalBottomSheetState()
     val paidFromSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = System.currentTimeMillis(),
+        initialSelectedDateMillis = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant()
+            .toEpochMilli(),
         selectableDates = BlockFutureDates()
     )
 
@@ -106,7 +109,9 @@ fun AddEditExpenseScreen(
     var dateText by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(ExpenseCategory.MISC) }
     var paidFrom by remember { mutableStateOf("") }
-    var paidBy by remember { mutableStateOf<PaidBy?>(null) }
+    var paidBy by remember { mutableStateOf(emptyList<SplitParticipant>()) }
+    var splitMode by remember { mutableStateOf(SplitMode.EQUAL) }
+    var splits by remember { mutableStateOf(emptyList<SplitParticipant>()) }
 
     var showDatePickerModal by remember { mutableStateOf(false) }
     var showCategoryPickerModal by remember { mutableStateOf(false) }
@@ -115,11 +120,23 @@ fun AddEditExpenseScreen(
     var isFetchingExpense by remember { mutableStateOf(false) }
     var previousPaymentMethods by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    fun recalculatePaidBy(selectedUsers: List<UserScheme>) {
+        paidBy = selectedUsers.map { it ->
+            SplitParticipant(
+                id = it.id,
+                name = it.name,
+                amount = amount.toDoubleOrNull() ?: 0.0
+            )
+        }
+    }
+
     fun checkFieldsArePopulated(): Boolean {
         return (expenseDescription.text.isNotBlank() &&
             amount.isNotBlank() &&
             dateText.isNotBlank() &&
-            (groupId == null || paidBy != null))
+            (groupId == null || paidBy.isNotEmpty())) &&
+            (groupId == null || splits.isNotEmpty()) &&
+            (groupId == null || splits.sumOf { it.amount } == amount.toDoubleOrNull())
     }
 
     fun submitExpense() {
@@ -135,12 +152,11 @@ fun AddEditExpenseScreen(
                 "category" to category.name,
             )
 
-            if (paidBy != null) {
+            if (paidBy.isNotEmpty()) {
                 expenseMap.remove("paidFrom")
-                expenseMap["paidBy"] = mapOf(
-                    "id" to (paidBy?.id ?: ""),
-                    "name" to (paidBy?.name ?: "")
-                )
+                expenseMap["paidBy"] = paidBy
+                expenseMap["splitMode"] = splitMode
+                expenseMap["splits"] = splits
             }
 
             if (mode != "EDIT") {
@@ -196,6 +212,8 @@ fun AddEditExpenseScreen(
                         category = ExpenseCategory.valueOf(expense.category)
                         paidFrom = expense.paidFrom
                         paidBy = expense.paidBy
+                        splitMode = SplitMode.valueOf(expense.splitMode)
+                        splits = expense.splits
                         datePickerState.selectedDateMillis = expense.timestamp
 
                         isFetchingExpense = false
@@ -205,6 +223,7 @@ fun AddEditExpenseScreen(
                         Log.e("Firestore", "${e.message}")
                     }
             }
+
             "SMS_ADD" -> {
                 val expense = expenseDao.getOne(expenseId).first()
                 if (expense != null) {
@@ -246,6 +265,17 @@ fun AddEditExpenseScreen(
                     groupName = data?.groupName ?: ""
                 }
             }
+    }
+
+    LaunchedEffect(amount) {
+        if (amount.isBlank()) return@LaunchedEffect
+
+        delay(400)
+        if (paidBy.size == 1) {
+            paidBy = listOf(
+                paidBy.first().copy(amount = amount.toDoubleOrNull() ?: 0.0)
+            )
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -318,7 +348,7 @@ fun AddEditExpenseScreen(
                         Text(
                             text = if (groupId != null) groupName else "Personal",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 8.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             ),
                             textAlign = TextAlign.Center,
@@ -327,68 +357,96 @@ fun AddEditExpenseScreen(
                     }
                 }
 
-                Column(
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    DateField(
-                        dateText = dateText,
-                        onFocus = {
-                            showDatePickerModal = true
-                            focusManager.clearFocus()
-                        }
-                    )
+                    item {
+                        DateField(
+                            dateText = dateText,
+                            onFocus = {
+                                showDatePickerModal = true
+                                focusManager.clearFocus()
+                            }
+                        )
+                    }
 
-                    AmountField(
-                        amount = amount,
-                        displayAmount = displayAmount,
-                        onAmountChange = { newAmount -> amount = newAmount },
-                        onFocusChanged = { isFocused ->
-                            if (isFocused) {
-                                displayAmount = null
-                            } else if (amount.isNotBlank()) {
-                                amount.toDoubleOrNull()?.let {
-                                    displayAmount = formatCurrency(it)
+                    item {
+                        AmountField(
+                            amount = amount,
+                            displayAmount = displayAmount,
+                            onAmountChange = { newAmount -> amount = newAmount },
+                            onFocusChanged = { isFocused ->
+                                if (isFocused) {
+                                    displayAmount = null
+                                } else if (amount.isNotBlank()) {
+                                    amount.toDoubleOrNull()?.let {
+                                        displayAmount = formatCurrency(it)
+                                    }
                                 }
                             }
-                        }
-                    )
-
-                    DescriptionField(
-                        description = expenseDescription,
-                        onDescriptionChange = { newDescription -> expenseDescription = newDescription }
-                    )
-
-                    CategoryField(
-                        category = category,
-                        onFocus = {
-                            showCategoryPickerModal = true
-                            focusManager.clearFocus()
-                        }
-                    )
-
-                    PaymentMethodField(
-                        isGroupExpense = groupId != null,
-                        paidFrom = paidFrom,
-                        paidBy = paidBy,
-                        onFocus = {
-                            showPaidFromModal = true
-                            focusManager.clearFocus()
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        modifier = Modifier.fillMaxWidth(0.95f),
-                        onClick = { submitExpense() },
-                        enabled = checkFieldsArePopulated()
-                    ) {
-                        Text(
-                            "Submit Expense",
-                            style = MaterialTheme.typography.labelLarge
                         )
+                    }
+
+                    item {
+                        DescriptionField(
+                            description = expenseDescription,
+                            onDescriptionChange = { newDescription ->
+                                expenseDescription = newDescription
+                            }
+                        )
+                    }
+
+                    item {
+                        CategoryField(
+                            category = category,
+                            onFocus = {
+                                showCategoryPickerModal = true
+                                focusManager.clearFocus()
+                            }
+                        )
+                    }
+
+                    item {
+                        PaymentMethodField(
+                            isGroupExpense = groupId != null,
+                            paidFrom = paidFrom,
+                            paidBy = paidBy,
+                            onFocus = {
+                                showPaidFromModal = true
+                                focusManager.clearFocus()
+                            }
+                        )
+                    }
+
+                    if (groupId != null) {
+                        item {
+                            SplitModeField(
+                                groupData = groupData,
+                                selectedSplitMode = splitMode,
+                                splits = splits,
+                                onSplitsChange = { newSplits, selectedSplitMode ->
+                                    splits = newSplits
+                                    splitMode = selectedSplitMode
+                                },
+                                amount = amount,
+                                mode = mode
+                            )
+                        }
+                    }
+
+                    item {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(0.95f),
+                            onClick = { submitExpense() },
+                            enabled = checkFieldsArePopulated()
+                        ) {
+                            Text(
+                                "Submit Expense",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
                 }
             }
@@ -417,8 +475,8 @@ fun AddEditExpenseScreen(
                         sheetState = paidFromSheetState,
                         onDismissRequest = { showPaidFromModal = false },
                         groupData = groupData,
-                        onMemberSelected = { member ->
-                            paidBy = member
+                        onMemberSelected = { members ->
+                            recalculatePaidBy(members)
                         }
                     )
                 } else {

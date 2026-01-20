@@ -25,6 +25,7 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = Color(0xFFE0E0E0),
     onBackground = Color(0xFFE0E0E0),
 
+    surfaceBright = Success,
     error = Danger,
 )
 
@@ -39,6 +40,7 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFF1C1B1F),
     onBackground = Color(0xFF1C1B1F),
 
+    surfaceBright = SuccessLight,
     error = DangerLight
 )
 

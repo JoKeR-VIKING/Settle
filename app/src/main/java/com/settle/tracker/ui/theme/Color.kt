@@ -15,6 +15,9 @@ val DarkSurface = Color(0xFF1E1E1E)
 val LightBackground = Color(0xFFFFFBFE)
 val LightSurface = Color(0xFFFFFBFE)
 
+val Success = Color(0xFF43A047)
+val SuccessLight = Color(0xFFC8E6C9)
+
 // Danger / Error
 val Danger = Color(0xFFE53935)
 val DangerLight = Color(0xFFEF5350)

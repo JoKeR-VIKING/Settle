@@ -12,7 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.settle.tracker.components.expenses.ExpenseRow
 import com.settle.tracker.scheme.ExpenseScheme
 import java.text.SimpleDateFormat
 import java.util.Date

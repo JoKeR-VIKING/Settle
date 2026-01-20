@@ -34,11 +34,11 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.UserScheme
+import com.settle.tracker.utils.fetchGroupMembersChunked
 
 @Composable
 fun GroupMemberList(
@@ -73,34 +73,15 @@ fun GroupMemberList(
             }
     }
 
-    fun <T> List<T>.chunkedSafe(size: Int = 10) = this.chunked(size)
-
-    fun fetchGroupMembersChunked(
-        memberIds: List<String>
-    ) {
-        val result = mutableListOf<UserScheme>()
-        updateLoadingStatus(true)
-
-        memberIds.chunkedSafe().forEach { chunk ->
-            db
-                .collection("users")
-                .whereIn(FieldPath.documentId(), chunk)
-                .get()
-                .addOnSuccessListener {
-                    result.addAll(it.toObjects(UserScheme::class.java))
-                    if (result.size >= memberIds.size) {
-                        groupMembers = result
-                    }
-                    updateLoadingStatus(false)
-                }
-                .addOnFailureListener {
-                    updateLoadingStatus(false)
-                }
-        }
-    }
-
     LaunchedEffect(groupData.members) {
-        fetchGroupMembersChunked(groupData.members)
+        fetchGroupMembersChunked(
+            memberIds = groupData.members,
+            updateLoadingStatus = updateLoadingStatus,
+            db = db,
+            updateGroupMembers = {
+                groupMembers = it
+            }
+        )
     }
 
     LazyColumn(
