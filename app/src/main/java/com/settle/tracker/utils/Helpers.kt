@@ -24,16 +24,13 @@ import androidx.compose.ui.unit.Dp
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.settle.tracker.R
-import com.settle.tracker.components.groups.EPSILON_VALUE
 import com.settle.tracker.scheme.ExpenseCategory
-import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.UserScheme
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.abs
 
 fun formatTimestamp(
     timestamp: Long,
@@ -199,26 +196,4 @@ fun fetchGroupMembersChunked(
                 updateLoadingStatus(false)
             }
     }
-}
-
-fun calculateNetBalances(
-    expenses: List<ExpenseScheme>
-): Map<String, Double> {
-    val balances = mutableMapOf<String, Double>()
-
-    expenses.forEach { expense ->
-        expense.paidBy.forEach {
-            balances[it.id] = (balances[it.id] ?: 0.0) + it.amount
-        }
-
-        expense.splits.forEach {
-            balances[it.id] = (balances[it.id] ?: 0.0) - it.amount
-        }
-    }
-
-    return balances
-        .mapValues { (_, amount) ->
-            if (abs(amount) < EPSILON_VALUE) 0.0 else amount
-        }
-        .filterValues { it != 0.0 }
 }
