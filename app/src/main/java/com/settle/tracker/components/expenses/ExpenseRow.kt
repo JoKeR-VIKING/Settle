@@ -165,16 +165,27 @@ fun ExpenseRow(
 
                             Text(
                                 text = when {
-                                    expense.paidBy.isNotEmpty() -> formatCurrency(balanceAmount.absoluteValue)
+                                    expense.paidBy.isNotEmpty() -> {
+                                        if (balanceAmount.absoluteValue != 0.0)
+                                            formatCurrency(balanceAmount.absoluteValue)
+                                        else
+                                            "not involved"
+                                    }
+
                                     else -> formatCurrency(expense.amount)
                                 },
-                                style = MaterialTheme.typography.labelLarge,
+                                style = when {
+                                    expense.paidBy.isNotEmpty() && balanceAmount.absoluteValue == 0.0 -> MaterialTheme.typography.labelSmall
+                                    else -> MaterialTheme.typography.labelLarge
+                                },
                                 letterSpacing = 0.3.sp,
                                 color = when {
                                     expense.paidBy.isNotEmpty() -> {
-                                        if (balanceAmount >= 0.0) MaterialTheme.colorScheme.surfaceBright
-                                        else MaterialTheme.colorScheme.error
+                                        if (balanceAmount > 0.0) MaterialTheme.colorScheme.surfaceBright
+                                        else if (balanceAmount < 0.0) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurface
                                     }
+
                                     else -> MaterialTheme.colorScheme.onSurface
                                 },
                             )
