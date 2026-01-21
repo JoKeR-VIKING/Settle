@@ -38,7 +38,7 @@ fun ExpenseTable(
     }
 
     LazyColumn(
-        modifier = modifier.fillMaxWidth(1f),
+        modifier = modifier.fillMaxWidth(),
     ) {
         groupedExpenses.forEach { (monthYear, monthExpenses) ->
             item {

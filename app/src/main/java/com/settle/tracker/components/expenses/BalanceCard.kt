@@ -34,6 +34,7 @@ fun BalanceCard(
     payerScheme: UserScheme,
     receiverScheme: UserScheme,
     amount: Double,
+    showSettle: Boolean,
     openUpiApp: () -> Unit,
     setPendingSettlement: () -> Unit,
     onShowConfirmDialog: (Boolean) -> Unit
@@ -106,7 +107,7 @@ fun BalanceCard(
                             if (receiverScheme.id == currentUser?.uid) MaterialTheme.colorScheme.surfaceBright
                             else if (payerScheme.id == currentUser?.uid) MaterialTheme.colorScheme.error
                             else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                            )
                     )
                 }
             }
@@ -134,25 +135,27 @@ fun BalanceCard(
             }
         }
 
-        OutlinedButton(
-            modifier = Modifier
-                .fillMaxWidth(0.4f),
-            border = BorderStroke(
-                width = 2.dp,
-                color = MaterialTheme.colorScheme.primary
-            ),
-            onClick = {
-                setPendingSettlement()
-                openUpiApp()
+        if (showSettle) {
+            OutlinedButton(
+                modifier = Modifier
+                    .fillMaxWidth(0.4f),
+                border = BorderStroke(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                onClick = {
+                    setPendingSettlement()
+                    openUpiApp()
 
-                onShowConfirmDialog(true)
+                    onShowConfirmDialog(true)
+                }
+            ) {
+                Text(
+                    text = "Settle",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
-        ) {
-            Text(
-                text = "Settle",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
         }
     }
 }

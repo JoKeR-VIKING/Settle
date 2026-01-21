@@ -7,6 +7,7 @@ plugins {
     id("com.google.gms.google-services")
     id("com.google.devtools.ksp")
     id("com.google.firebase.appdistribution")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -79,6 +80,8 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.core.splashscreen)
     implementation("com.google.android.play:integrity:1.6.0")
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-analytics")
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

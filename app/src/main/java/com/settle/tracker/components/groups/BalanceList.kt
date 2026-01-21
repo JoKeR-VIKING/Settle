@@ -3,10 +3,22 @@ package com.settle.tracker.components.groups
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,9 +45,9 @@ import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.SplitMode
 import com.settle.tracker.scheme.SplitParticipant
 import com.settle.tracker.scheme.UserScheme
+import com.settle.tracker.utils.calculateNetBalances
 import com.settle.tracker.utils.fetchGroupMembersChunked
 import java.util.UUID
-import kotlin.math.abs
 import kotlin.math.min
 
 const val EPSILON_VALUE = 0.01
@@ -55,36 +67,15 @@ fun BalanceList(
     val currentUser = Firebase.auth.currentUser
     val db = Firebase.firestore
 
-    var settlements by remember { mutableStateOf(emptyList<Settlement>()) }
     val groupMemberMap = remember {
         mutableStateMapOf<String, UserScheme>()
     }
+    var settlements by remember { mutableStateOf(emptyList<Settlement>()) }
     var pendingSettlement by remember { mutableStateOf<Triple<UserScheme, UserScheme, Double>?>(null) }
+    var othersExpanded by remember { mutableStateOf(false) }
 
     var isLoading by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
-
-    fun calculateNetBalances(
-        expenses: List<ExpenseScheme>
-    ): Map<String, Double> {
-        val balances = mutableMapOf<String, Double>()
-
-        expenses.forEach { expense ->
-            expense.paidBy.forEach {
-                balances[it.id] = (balances[it.id] ?: 0.0) + it.amount
-            }
-
-            expense.splits.forEach {
-                balances[it.id] = (balances[it.id] ?: 0.0) - it.amount
-            }
-        }
-
-        return balances
-            .mapValues { (_, amount) ->
-                if (abs(amount) < EPSILON_VALUE) 0.0 else amount
-            }
-            .filterValues { it != 0.0 }
-    }
 
     fun simplifyBalances(
         balances: Map<String, Double>
@@ -181,7 +172,7 @@ fun BalanceList(
         receiverScheme: UserScheme,
         amount: Double
     ) {
-        if (receiverScheme.upiId.isBlank() || amount >= 0.0) return
+        if (receiverScheme.upiId.isBlank() || receiverScheme.id == currentUser?.uid) return
 
         val uri = Uri.parse(
             "upi://pay" +
@@ -253,6 +244,7 @@ fun BalanceList(
                             payerScheme = payerScheme,
                             receiverScheme = receiverScheme,
                             amount = amount,
+                            showSettle = true,
                             openUpiApp = {
                                 openUpiApp(
                                     context = context,
@@ -275,49 +267,77 @@ fun BalanceList(
                 }
 
             item {
-                Text(
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                    text = "Other's Balances",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Start
-                )
-            }
-
-            settlements
-                .filter { it.from != currentUser?.uid && it.to != currentUser?.uid }
-                .forEach { settlement ->
-                    val payerScheme = groupMemberMap[settlement.from]
-                    val receiverScheme = groupMemberMap[settlement.to]
-                    val amount = settlement.amount
-
-                    if (payerScheme == null || receiverScheme == null) return@forEach
-
-                    item {
-                        BalanceCard(
-                            payerScheme = payerScheme,
-                            receiverScheme = receiverScheme,
-                            amount = amount,
-                            openUpiApp = {
-                                openUpiApp(
-                                    context = context,
-                                    receiverScheme = receiverScheme,
-                                    amount = amount
-                                )
-                            },
-                            setPendingSettlement = {
-                                pendingSettlement = Triple(
-                                    payerScheme,
-                                    receiverScheme,
-                                    amount
-                                )
-                            },
-                            onShowConfirmDialog = {
-                                showConfirmDialog = it
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .clickable(
+                            onClick = {
+                                othersExpanded = !othersExpanded
                             }
                         )
-                    }
+                        .padding(horizontal = 4.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Other's Balances",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Start
+                    )
+
+                    Icon(
+                        imageVector = (
+                            if (othersExpanded)
+                                Icons.Filled.ArrowDropUp
+                            else Icons.Filled.ArrowDropDown
+                            ),
+                        contentDescription = "Arrow Dropdown"
+                    )
                 }
+            }
+
+            item {
+                AnimatedVisibility(
+                    visible = othersExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    settlements
+                        .filter { it.from != currentUser?.uid && it.to != currentUser?.uid }
+                        .forEach { settlement ->
+                            val payerScheme = groupMemberMap[settlement.from]
+                            val receiverScheme = groupMemberMap[settlement.to]
+                            val amount = settlement.amount
+
+                            if (payerScheme == null || receiverScheme == null) return@forEach
+
+                            BalanceCard(
+                                payerScheme = payerScheme,
+                                receiverScheme = receiverScheme,
+                                amount = amount,
+                                showSettle = false,
+                                openUpiApp = {
+                                    openUpiApp(
+                                        context = context,
+                                        receiverScheme = receiverScheme,
+                                        amount = amount
+                                    )
+                                },
+                                setPendingSettlement = {
+                                    pendingSettlement = Triple(
+                                        payerScheme,
+                                        receiverScheme,
+                                        amount
+                                    )
+                                },
+                                onShowConfirmDialog = {
+                                    showConfirmDialog = it
+                                }
+                            )
+                        }
+                }
+            }
         }
 
         if (showConfirmDialog) {

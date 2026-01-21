@@ -1,5 +1,6 @@
 package com.settle.tracker.utils
 
+import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Fastfood
@@ -23,13 +24,16 @@ import androidx.compose.ui.unit.Dp
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.settle.tracker.R
+import com.settle.tracker.components.groups.EPSILON_VALUE
 import com.settle.tracker.scheme.ExpenseCategory
+import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.UserScheme
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 
 fun formatTimestamp(
     timestamp: Long,
@@ -184,6 +188,7 @@ fun fetchGroupMembersChunked(
             .whereIn(FieldPath.documentId(), chunk)
             .get()
             .addOnSuccessListener {
+                Log.d("GroupMembers", "$it")
                 result.addAll(it.toObjects(UserScheme::class.java))
                 if (result.size >= memberIds.size) {
                     updateGroupMembers(result)
@@ -194,4 +199,26 @@ fun fetchGroupMembersChunked(
                 updateLoadingStatus(false)
             }
     }
+}
+
+fun calculateNetBalances(
+    expenses: List<ExpenseScheme>
+): Map<String, Double> {
+    val balances = mutableMapOf<String, Double>()
+
+    expenses.forEach { expense ->
+        expense.paidBy.forEach {
+            balances[it.id] = (balances[it.id] ?: 0.0) + it.amount
+        }
+
+        expense.splits.forEach {
+            balances[it.id] = (balances[it.id] ?: 0.0) - it.amount
+        }
+    }
+
+    return balances
+        .mapValues { (_, amount) ->
+            if (abs(amount) < EPSILON_VALUE) 0.0 else amount
+        }
+        .filterValues { it != 0.0 }
 }

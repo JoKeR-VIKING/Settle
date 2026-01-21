@@ -2,19 +2,17 @@ package com.settle.tracker.components.expenses
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -43,7 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.settle.tracker.components.MultiDigitTextField
-import com.settle.tracker.utils.PaymentMethodInfo
 import com.settle.tracker.utils.parsePaymentMethod
 import kotlinx.coroutines.launch
 
@@ -138,7 +135,7 @@ fun PaymentMethodPickerModal(
                                     label = {
                                         Text(
                                             text = label,
-                                            style = MaterialTheme.typography.labelMedium,
+                                            style = MaterialTheme.typography.labelSmall,
                                             maxLines = 2,
                                             textAlign = TextAlign.Center
                                         )

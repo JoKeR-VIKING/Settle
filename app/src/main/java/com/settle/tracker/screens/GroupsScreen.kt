@@ -36,17 +36,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.groups.CreateGroupModal
+import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
+import com.settle.tracker.utils.calculateNetBalances
 import com.settle.tracker.utils.dashedBorder
+import com.settle.tracker.utils.formatCurrency
 import java.util.UUID
+import kotlin.math.absoluteValue
 
 const val MAX_GROUP_NAME_CHARS = 20
+
+data class GroupWithBalance(
+    val group: GroupScheme,
+    val balance: Double
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +68,7 @@ fun GroupsScreen(
 
     val db = Firebase.firestore
 
-    var groups by remember { mutableStateOf<List<GroupScheme>>(emptyList()) }
+    var groupsWithBalance by remember { mutableStateOf<List<GroupWithBalance>>(emptyList()) }
     var showGroupModal by remember { mutableStateOf(false) }
     var isFetching by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -106,10 +116,37 @@ fun GroupsScreen(
                     return@addSnapshotListener
                 }
 
-                if (snapshot != null) {
-                    groups = snapshot.toObjects(GroupScheme::class.java)
+                if (snapshot == null) {
                     isFetching = false
+                    return@addSnapshotListener
                 }
+
+                val groups = snapshot.toObjects(GroupScheme::class.java)
+
+                groups.forEach { group ->
+                    db
+                        .collection("groups")
+                        .document(group.id)
+                        .collection("expenses")
+                        .addSnapshotListener { expenseSnap, e ->
+                            if (e != null) {
+                                Log.e("Firestore", "${e.message}")
+                                isFetching = false
+                                return@addSnapshotListener
+                            }
+
+                            val expenses =
+                                expenseSnap?.toObjects(ExpenseScheme::class.java) ?: emptyList()
+                            val myBalance = calculateNetBalances(expenses)
+
+                            groupsWithBalance += GroupWithBalance(
+                                group = group,
+                                balance = myBalance[currentUser.uid] ?: 0.0
+                            )
+                        }
+                }
+
+                isFetching = false
             }
     }
 
@@ -179,13 +216,13 @@ fun GroupsScreen(
                             .weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        groups.forEach { group ->
+                        groupsWithBalance.forEach { groupWithBalance ->
                             item {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable(
-                                            onClick = { onOpenGroup(group.id) }
+                                            onClick = { onOpenGroup(groupWithBalance.group.id) }
                                         )
                                         .padding(horizontal = 22.dp, vertical = 20.dp),
                                     horizontalArrangement = Arrangement.spacedBy(25.dp),
@@ -197,9 +234,31 @@ fun GroupsScreen(
                                     )
 
                                     Text(
-                                        group.groupName,
+                                        groupWithBalance.group.groupName,
                                         style = MaterialTheme.typography.labelLarge
                                     )
+
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        horizontalAlignment = Alignment.End,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (groupWithBalance.balance > 0.0) "You are owed" else "You owe",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+
+                                        Text(
+                                            text = formatCurrency(groupWithBalance.balance.absoluteValue),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            letterSpacing = 0.3.sp,
+                                            color = (
+                                                if (groupWithBalance.balance > 0.0) MaterialTheme.colorScheme.surfaceBright
+                                                else if (groupWithBalance.balance < 0.0) MaterialTheme.colorScheme.error
+                                                else MaterialTheme.colorScheme.onSurface
+                                                ),
+                                        )
+                                    }
                                 }
 
                                 HorizontalDivider(color = Color.Gray.copy(0.4f))
@@ -207,17 +266,17 @@ fun GroupsScreen(
                         }
                     }
                 }
+            }
 
-                if (showGroupModal) {
-                    CreateGroupModal(
-                        sheetState = groupModalSheetState,
-                        onDismissRequest = { showGroupModal = false },
-                        groupName = newGroupName,
-                        onGroupNameChange = { newGroupName = it },
-                        isSubmitting = isSubmitting,
-                        onCreateGroup = { createGroup() }
-                    )
-                }
+            if (showGroupModal) {
+                CreateGroupModal(
+                    sheetState = groupModalSheetState,
+                    onDismissRequest = { showGroupModal = false },
+                    groupName = newGroupName,
+                    onGroupNameChange = { newGroupName = it },
+                    isSubmitting = isSubmitting,
+                    onCreateGroup = { createGroup() }
+                )
             }
         }
     }
