@@ -317,12 +317,8 @@ fun SplitModeField(
     }
 
     LaunchedEffect(amount) {
-        if (amount.isBlank()) return@LaunchedEffect
-
         delay(400)
-        amount.toDoubleOrNull()?.let {
-            totalAmount = it
-        }
+        totalAmount = amount.toDoubleOrNull() ?: 0.0
     }
 
     LaunchedEffect(
@@ -336,8 +332,7 @@ fun SplitModeField(
             !isSplitHydrated ||
             splitMode != SplitMode.EQUAL ||
             groupMembers.isEmpty() ||
-            selectedUserIds.isEmpty() ||
-            totalAmount <= 0
+            selectedUserIds.isEmpty()
         ) return@LaunchedEffect
 
         onSplitsChange(

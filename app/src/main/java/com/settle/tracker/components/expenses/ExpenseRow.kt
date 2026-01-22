@@ -57,6 +57,11 @@ fun ExpenseRow(
         .getInstance(context)
         .expenseDraftDao()
 
+    val currentUser = Firebase.auth.currentUser
+    val isInPaidBy = expense.paidBy.any { it.id == currentUser?.uid }
+    val isInSplits = expense.splits.any { it.id == currentUser?.uid }
+    val isInvolved = isInPaidBy || isInSplits
+
     var balanceAmount by remember { mutableStateOf(0.0) }
 
     fun getExpenseSubText(): String {
@@ -166,10 +171,10 @@ fun ExpenseRow(
                             Text(
                                 text = when {
                                     expense.paidBy.isNotEmpty() -> {
-                                        if (balanceAmount.absoluteValue != 0.0)
-                                            formatCurrency(balanceAmount.absoluteValue)
-                                        else
+                                        if (balanceAmount.absoluteValue == 0.0 && !isInvolved)
                                             "not involved"
+                                        else
+                                            formatCurrency(balanceAmount.absoluteValue)
                                     }
 
                                     else -> formatCurrency(expense.amount)

@@ -64,7 +64,6 @@ import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.SplitMode
 import com.settle.tracker.scheme.SplitParticipant
-import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
 import kotlinx.coroutines.delay
@@ -119,16 +118,6 @@ fun AddEditExpenseScreen(
     var isSubmittingExpense by remember { mutableStateOf(false) }
     var isFetchingExpense by remember { mutableStateOf(false) }
     var previousPaymentMethods by remember { mutableStateOf<List<String>>(emptyList()) }
-
-    fun recalculatePaidBy(selectedUsers: List<UserScheme>) {
-        paidBy = selectedUsers.map { it ->
-            SplitParticipant(
-                id = it.id,
-                name = it.name,
-                amount = amount.toDoubleOrNull() ?: 0.0
-            )
-        }
-    }
 
     fun checkFieldsArePopulated(): Boolean {
         return (expenseDescription.text.isNotBlank() &&
@@ -476,9 +465,11 @@ fun AddEditExpenseScreen(
                         sheetState = paidFromSheetState,
                         onDismissRequest = { showPaidFromModal = false },
                         groupData = groupData,
+                        paidBy = paidBy,
                         onMemberSelected = { members ->
-                            recalculatePaidBy(members)
-                        }
+                            paidBy = members
+                        },
+                        amount = amount.toDoubleOrNull() ?: 0.0
                     )
                 } else {
                     PaymentMethodPickerModal(

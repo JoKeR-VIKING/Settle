@@ -21,7 +21,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,18 +37,17 @@ import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.UserScheme
-import com.settle.tracker.utils.fetchGroupMembersChunked
 
 @Composable
 fun GroupMemberList(
     groupData: GroupScheme,
+    groupMembers: List<UserScheme>,
     updateLoadingStatus: (Boolean) -> Unit,
     onClick: ((UserScheme) -> Unit)? = null,
     modifier: Modifier
 ) {
     var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
     var removingMemberId by remember { mutableStateOf("") }
-    var groupMembers by remember { mutableStateOf(emptyList<UserScheme>()) }
 
     val db = Firebase.firestore
 
@@ -71,17 +69,6 @@ fun GroupMemberList(
                 Log.e("Firestore", "${it.message}")
                 updateLoadingStatus(false)
             }
-    }
-
-    LaunchedEffect(groupData.members) {
-        fetchGroupMembersChunked(
-            memberIds = groupData.members,
-            updateLoadingStatus = updateLoadingStatus,
-            db = db,
-            updateGroupMembers = {
-                groupMembers = it
-            }
-        )
     }
 
     LazyColumn(
