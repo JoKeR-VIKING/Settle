@@ -33,6 +33,7 @@ import com.settle.tracker.components.BottomBar
 import com.settle.tracker.components.BottomBarScreen
 import com.settle.tracker.screens.AccountScreen
 import com.settle.tracker.screens.AddEditExpenseScreen
+import com.settle.tracker.screens.AnalyticsScreen
 import com.settle.tracker.screens.ExpensesScreen
 import com.settle.tracker.screens.GroupExpensesScreen
 import com.settle.tracker.screens.GroupsScreen
@@ -71,6 +72,8 @@ sealed class Screen(val route: String) {
             groupId: String
         ) = "group_expenses?groupId=$groupId"
     }
+
+    object Analytics: Screen("analytics")
 }
 
 class MainActivity : ComponentActivity() {
@@ -412,6 +415,9 @@ private fun AppContent(
                                 }
                             },
                         )
+                    }
+                    composable(Screen.Analytics.route) {
+                        AnalyticsScreen()
                     }
                 }
             }
