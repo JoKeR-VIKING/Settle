@@ -28,6 +28,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
+import com.google.firebase.messaging.FirebaseMessaging
 import com.settle.tracker.components.BottomBar
 import com.settle.tracker.components.BottomBarScreen
 import com.settle.tracker.screens.AccountScreen
@@ -40,6 +41,7 @@ import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.ui.theme.SettleTheme
 import com.settle.tracker.utils.Permissions
 import com.settle.tracker.utils.createSmsNotificationChannel
+import com.settle.tracker.utils.saveTokenToFirestore
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
@@ -179,6 +181,14 @@ private fun AppContent(
                         .set(userData, SetOptions.merge())
                         .addOnSuccessListener {
                             currentUser = signedInUser
+
+                            FirebaseMessaging
+                                .getInstance()
+                                .token
+                                .addOnSuccessListener { token ->
+                                    saveTokenToFirestore(token)
+                                }
+
                             if (signedInUser.phoneNumber == null) {
                                 navController.navigate(Screen.PhoneVerification.route) {
                                     popUpTo(navController.graph.startDestinationId) {
@@ -213,19 +223,25 @@ private fun AppContent(
         mode,
         currentUser
     ) {
-        if (
-            destination == "add_edit_expense" &&
-            smsExpenseId != null &&
-            mode != null &&
-            currentUser != null
-        ) {
-            navController.navigate(
-                Screen.AddEditExpense.createRoute(
-                    mode = mode,
-                    expenseId = smsExpenseId
-                )
-            ) {
-                launchSingleTop = true
+        if (currentUser == null) return@LaunchedEffect
+
+        when (destination) {
+            "add_edit_expense" -> {
+                if (smsExpenseId != null && mode != null) {
+                    navController.navigate(
+                        Screen.AddEditExpense.createRoute(
+                            mode = mode,
+                            expenseId = smsExpenseId
+                        )
+                    ) {
+                        launchSingleTop = true
+                    }
+                }
+            }
+            "groups" -> {
+                navController.navigate(Screen.Groups.route) {
+                    launchSingleTop = true
+                }
             }
         }
     }

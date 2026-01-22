@@ -32,6 +32,45 @@ fun ExpenseScheme.toEntity(): ExpenseEntity = ExpenseEntity(
 const val SMS_CHANNEL_ID = "sms_expense_channel"
 const val GROUP_ID = "EXPENSE_GROUP"
 
+fun sendNotification(
+    context: Context,
+    title: String,
+    text: String,
+    category: String,
+    pendingIntent: PendingIntent? = null
+) {
+    val largeIcon = BitmapFactory.decodeResource(
+        context.resources,
+        getExpenseCategoryLargeIcon(category)
+    )
+
+    val notification = NotificationCompat.Builder(
+        context,
+        SMS_CHANNEL_ID
+    )
+        .setSmallIcon(R.drawable.logo)
+        .setLargeIcon(largeIcon)
+        .setContentTitle(title)
+        .setContentText(text)
+        .setStyle(
+            NotificationCompat.BigTextStyle()
+                .setBigContentTitle(title)
+                .bigText(text)
+        )
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+        .setGroup(GROUP_ID)
+        .setAutoCancel(true)
+
+    pendingIntent?.let {
+        notification.setContentIntent(pendingIntent)
+    }
+
+    NotificationManagerCompat
+        .from(context)
+        .notify(System.currentTimeMillis().toInt(), notification.build())
+}
+
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
@@ -75,34 +114,13 @@ class SmsReceiver : BroadcastReceiver() {
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
 
-                    val largeIcon = BitmapFactory.decodeResource(
-                        context.resources,
-                        getExpenseCategoryLargeIcon(draft.category)
-                    )
-
-                    val notification = NotificationCompat.Builder(
+                    sendNotification(
                         context,
-                        SMS_CHANNEL_ID
+                        title = "Spent ${formatCurrency(draft.amount)}",
+                        text = "Paid to ${draft.details} using ${draft.paidFrom}",
+                        category = draft.category,
+                        pendingIntent
                     )
-                        .setSmallIcon(R.drawable.logo)
-                        .setLargeIcon(largeIcon)
-                        .setContentTitle("Spent ${formatCurrency(draft.amount)}")
-                        .setContentText("Paid to ${draft.details} using ${draft.paidFrom}")
-                        .setStyle(
-                            NotificationCompat.BigTextStyle()
-                                .setBigContentTitle("Spent ${formatCurrency(draft.amount)}")
-                                .bigText("Paid to ${draft.details} using ${draft.paidFrom}")
-                        )
-                        .setPriority(NotificationCompat.PRIORITY_HIGH)
-                        .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                        .setGroup(GROUP_ID)
-                        .setAutoCancel(true)
-                        .setContentIntent(pendingIntent)
-                        .build()
-
-                    NotificationManagerCompat
-                        .from(context)
-                        .notify(System.currentTimeMillis().toInt(), notification)
                 }
             }
         }
