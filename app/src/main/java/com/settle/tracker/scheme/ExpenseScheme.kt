@@ -40,5 +40,6 @@ data class ExpenseScheme(
     val paidBy: List<SplitParticipant> = emptyList(),
     val splitMode: String = SplitMode.EQUAL.name,
     val splits: List<SplitParticipant> = emptyList(),
-    val createdAt: Long = 0L
+    val createdAt: Long = 0L,
+    val recurringTemplateId: String? = null
 )

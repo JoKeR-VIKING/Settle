@@ -58,12 +58,16 @@ import com.settle.tracker.components.expenses.DescriptionField
 import com.settle.tracker.components.expenses.GroupMemberPickerModal
 import com.settle.tracker.components.expenses.PaymentMethodField
 import com.settle.tracker.components.expenses.PaymentMethodPickerModal
+import com.settle.tracker.components.expenses.RecurringExpenseField
 import com.settle.tracker.components.expenses.SplitModeField
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
+import com.settle.tracker.scheme.RecurrenceType
+import com.settle.tracker.scheme.RecurringExpensesScheme
 import com.settle.tracker.scheme.SplitMode
 import com.settle.tracker.scheme.SplitParticipant
+import com.settle.tracker.utils.calculateNextOccurrence
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
 import kotlinx.coroutines.delay
@@ -72,6 +76,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.UUID
+import kotlin.math.abs
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,6 +117,10 @@ fun AddEditExpenseScreen(
     var splitMode by remember { mutableStateOf(SplitMode.EQUAL) }
     var splits by remember { mutableStateOf(emptyList<SplitParticipant>()) }
 
+    var recurringTemplateId by remember { mutableStateOf(UUID.randomUUID().toString()) }
+    var isRecurring by remember { mutableStateOf(false) }
+    var frequency by remember { mutableStateOf(RecurrenceType.MONTHLY) }
+
     var showDatePickerModal by remember { mutableStateOf(false) }
     var showCategoryPickerModal by remember { mutableStateOf(false) }
     var showPaidFromModal by remember { mutableStateOf(false) }
@@ -119,14 +128,19 @@ fun AddEditExpenseScreen(
     var isFetchingExpense by remember { mutableStateOf(false) }
     var previousPaymentMethods by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    fun Double.isAlmostEqualTo(other: Double?): Boolean {
+        if (other == null) return false
+        return abs(this - other) < 0.001
+    }
+
     fun checkFieldsArePopulated(): Boolean {
         return (expenseDescription.text.isNotBlank() &&
             amount.isNotBlank() &&
             dateText.isNotBlank() &&
             (groupId == null || paidBy.isNotEmpty())) &&
             (groupId == null || splits.isNotEmpty()) &&
-            (groupId == null || splits.sumOf { it.amount } == amount.toDoubleOrNull()) &&
-            (groupId == null || paidBy.sumOf { it.amount } == amount.toDoubleOrNull())
+            (groupId == null || splits.sumOf { it.amount }.isAlmostEqualTo(amount.toDoubleOrNull())) &&
+            (groupId == null || paidBy.sumOf { it.amount }.isAlmostEqualTo(amount.toDoubleOrNull()))
     }
 
     fun submitExpense() {
@@ -153,9 +167,15 @@ fun AddEditExpenseScreen(
                 expenseMap["createdAt"] = System.currentTimeMillis()
             }
 
-            db
+            if (isRecurring) {
+                expenseMap["recurringTemplateId"] = recurringTemplateId
+            }
+
+            val ref = db
                 .collection(if (groupId == null) "users" else "groups")
                 .document(groupId ?: currentUser.uid)
+
+            ref
                 .collection("expenses")
                 .document(id)
                 .set(expenseMap, SetOptions.merge())
@@ -165,8 +185,54 @@ fun AddEditExpenseScreen(
                             expenseDao.delete(id)
                         }
                     }
-                    isSubmittingExpense = false
-                    onBack()
+
+                    if (mode == "EDIT") {
+                        isSubmittingExpense = false
+                        onBack()
+                        return@addOnSuccessListener
+                    }
+
+                    if (isRecurring) {
+                        val recurringTemplate = RecurringExpensesScheme(
+                            id = recurringTemplateId,
+                            expenseData = ExpenseScheme(
+                                id = "",
+                                timestamp = 0L,
+                                details = expenseDescription.text.trim(),
+                                paidFrom = paidFrom.trim().ifBlank { "Cash" },
+                                paidBy = paidBy,
+                                amount = (amount.toDoubleOrNull() ?: 0.0),
+                                category = category.name,
+                                splitMode = splitMode.name,
+                                splits = splits,
+                                recurringTemplateId = recurringTemplateId
+                            ),
+                            frequency = frequency.name,
+                            startAt = (datePickerState.selectedDateMillis ?: System.currentTimeMillis()),
+                            nextOccurrenceAt = calculateNextOccurrence(
+                                from = (datePickerState.selectedDateMillis ?: System.currentTimeMillis()),
+                                after = frequency
+                            ),
+                            paused = false,
+                            createdAt = System.currentTimeMillis()
+                        )
+
+                        ref
+                            .collection("recurring_expenses")
+                            .document(recurringTemplateId)
+                            .set(recurringTemplate, SetOptions.merge())
+                            .addOnSuccessListener {
+                                isSubmittingExpense = false
+                                onBack()
+                            }
+                            .addOnFailureListener { e ->
+                                isSubmittingExpense = false
+                                Log.e("Firestore", "${e.message}")
+                            }
+                    } else {
+                        isSubmittingExpense = false
+                        onBack()
+                    }
                 }
                 .addOnFailureListener { e ->
                     isSubmittingExpense = false
@@ -185,9 +251,11 @@ fun AddEditExpenseScreen(
 
         when (mode) {
             "EDIT" -> {
-                db
+                val ref = db
                     .collection(if (groupId == null) "users" else "groups")
                     .document(groupId ?: currentUser.uid)
+
+                ref
                     .collection("expenses")
                     .document(expenseId)
                     .get()
@@ -422,6 +490,17 @@ fun AddEditExpenseScreen(
                                 },
                                 amount = amount,
                                 mode = mode
+                            )
+                        }
+                    }
+
+                    if (mode != "EDIT") {
+                        item {
+                            RecurringExpenseField(
+                                isRecurring = isRecurring,
+                                toggleIsRecurring = { isRecurring = it },
+                                frequency = frequency,
+                                onFrequencyChange = { frequency = it }
                             )
                         }
                     }

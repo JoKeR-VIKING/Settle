@@ -2,6 +2,8 @@ import { initializeApp } from "firebase-admin/app";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { sendExpenseNotification } from "./notification";
 
+export { processRecurring } from "./process_recurring";
+
 initializeApp();
 
 function formatCurrency(amount: number): string {

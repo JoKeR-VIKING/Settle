@@ -3,10 +3,14 @@ package com.settle.tracker.screens
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
@@ -23,7 +28,21 @@ import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.FabMenu
 import com.settle.tracker.components.common.FabOverlay
 import com.settle.tracker.components.expenses.ExpenseTable
+import com.settle.tracker.components.expenses.RecurringExpensesList
 import com.settle.tracker.scheme.ExpenseScheme
+
+enum class DashboardType {
+    EXPENSES,
+    RECURRING_EXPENSES;
+
+    fun getDisplayName(): String =
+        this.name
+            .lowercase()
+            .split('_', ' ')
+            .joinToString(" ") { word ->
+                word.replaceFirstChar { it.uppercase() }
+            }
+}
 
 @Composable
 fun ExpensesScreen(
@@ -37,6 +56,8 @@ fun ExpensesScreen(
 
     var expenses by remember { mutableStateOf<List<ExpenseScheme>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
+
+    var selectedTab by remember { mutableStateOf(DashboardType.EXPENSES) }
 
     val onDeleteExpense: (String) -> Unit = { expenseId ->
         db
@@ -93,7 +114,7 @@ fun ExpensesScreen(
             )
         },
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 16.dp)
@@ -104,12 +125,49 @@ fun ExpensesScreen(
                     focusManager.clearFocus()
                 },
         ) {
-            ExpenseTable(
-                expenses = expenses,
-                onEditExpense = onEditExpense,
-                onDeleteExpense = onDeleteExpense,
-                modifier = Modifier
-            )
+            TabRow(
+                selectedTabIndex = selectedTab.ordinal,
+            ) {
+                Tab(
+                    selected = selectedTab == DashboardType.EXPENSES,
+                    onClick = {  selectedTab = DashboardType.EXPENSES },
+                    text = {
+                        Text(
+                            text = DashboardType.EXPENSES.getDisplayName(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                )
+
+                Tab(
+                    selected = selectedTab == DashboardType.RECURRING_EXPENSES,
+                    onClick = { selectedTab = DashboardType.RECURRING_EXPENSES },
+                    text = {
+                        Text(
+                            text = DashboardType.RECURRING_EXPENSES.getDisplayName(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                )
+            }
+
+            if (selectedTab == DashboardType.EXPENSES) {
+                ExpenseTable(
+                    expenses = expenses,
+                    onEditExpense = onEditExpense,
+                    onDeleteExpense = onDeleteExpense,
+                    modifier = Modifier
+                )
+            } else {
+                RecurringExpensesList(
+                    ownerCollection = "users",
+                    ownerId = currentUser.uid,
+                )
+            }
         }
 
         FabOverlay(

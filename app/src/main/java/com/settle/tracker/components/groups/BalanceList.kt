@@ -47,6 +47,8 @@ import com.settle.tracker.scheme.SplitParticipant
 import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.utils.calculateNetBalances
 import com.settle.tracker.utils.fetchGroupMembersChunked
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import kotlin.math.min
 
@@ -131,7 +133,10 @@ fun BalanceList(
 
         val settlementData = ExpenseScheme(
             id = expenseId,
-            timestamp = System.currentTimeMillis(),
+            timestamp = LocalDate.now()
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli(),
             details = "Settlement with ${receiverScheme.name}",
             amount = amount,
             category = ExpenseCategory.SETTLEMENT.name,

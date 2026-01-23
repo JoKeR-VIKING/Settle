@@ -104,6 +104,7 @@ fun GroupsScreen(
 
     LaunchedEffect(Unit) {
         isFetching = true
+        groupsWithBalance = emptyList()
 
         db
             .collection("groups")

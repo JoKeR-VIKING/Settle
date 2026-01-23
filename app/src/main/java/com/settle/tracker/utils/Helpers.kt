@@ -1,6 +1,5 @@
 package com.settle.tracker.utils
 
-import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Fastfood
@@ -25,6 +24,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.settle.tracker.R
 import com.settle.tracker.scheme.ExpenseCategory
+import com.settle.tracker.scheme.RecurrenceType
 import com.settle.tracker.scheme.UserScheme
 import java.text.NumberFormat
 import java.time.Instant
@@ -185,7 +185,6 @@ fun fetchGroupMembersChunked(
             .whereIn(FieldPath.documentId(), chunk)
             .get()
             .addOnSuccessListener {
-                Log.d("GroupMembers", "$it")
                 result.addAll(it.toObjects(UserScheme::class.java))
                 if (result.size >= memberIds.size) {
                     updateGroupMembers(result)
@@ -196,4 +195,27 @@ fun fetchGroupMembersChunked(
                 updateLoadingStatus(false)
             }
     }
+}
+
+fun calculateNextOccurrence(
+    from: Long,
+    after: RecurrenceType,
+    zoneId: ZoneId = ZoneId.systemDefault()
+): Long {
+    val dateTime = Instant
+        .ofEpochMilli(from)
+        .atZone(zoneId)
+        .withHour(0)
+        .withMinute(0)
+        .withSecond(0)
+        .withNano(0)
+
+    val next = when (after) {
+        RecurrenceType.DAILY -> dateTime.plusDays(1)
+        RecurrenceType.WEEKLY -> dateTime.plusWeeks(1)
+        RecurrenceType.MONTHLY -> dateTime.plusMonths(1)
+        RecurrenceType.YEARLY -> dateTime.plusYears(1)
+    }
+
+    return next.toInstant().toEpochMilli()
 }

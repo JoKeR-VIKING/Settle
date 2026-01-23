@@ -5,6 +5,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextAlign
 import com.settle.tracker.screens.GroupTab
 
 @Composable
@@ -23,6 +24,19 @@ fun GroupTabRow(
                     "Expenses",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        )
+
+        Tab(
+            selected = selectedTab == GroupTab.RECURRING_EXPENSES,
+            onClick = { onTabSelected(GroupTab.RECURRING_EXPENSES) },
+            text = {
+                Text(
+                    "Recurring Expenses",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         )

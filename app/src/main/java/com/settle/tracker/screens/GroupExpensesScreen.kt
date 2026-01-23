@@ -38,6 +38,7 @@ import com.settle.tracker.components.FabMenu
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.common.FabOverlay
 import com.settle.tracker.components.expenses.ExpenseTable
+import com.settle.tracker.components.expenses.RecurringExpensesList
 import com.settle.tracker.components.groups.BalanceList
 import com.settle.tracker.components.groups.FullScreenDialog
 import com.settle.tracker.components.groups.GroupTabRow
@@ -47,6 +48,7 @@ import com.settle.tracker.scheme.SplitParticipant
 
 enum class GroupTab {
     EXPENSES,
+    RECURRING_EXPENSES,
     BALANCES
 }
 
@@ -251,6 +253,11 @@ fun GroupExpensesScreen(
                             onDismiss = { expanded = false }
                         )
                     }
+                } else if (selectedTab == GroupTab.RECURRING_EXPENSES) {
+                    RecurringExpensesList(
+                        ownerCollection = "groups",
+                        ownerId = groupId,
+                    )
                 } else {
                     BalanceList(
                         groupData = groupData,
