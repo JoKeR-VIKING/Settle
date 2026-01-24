@@ -1,10 +1,14 @@
-package com.settle.tracker.components.analytics.personal
+package com.settle.tracker.components.analytics.groups
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,25 +22,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.analytics.CategorizedSpendingChart
-import com.settle.tracker.components.analytics.DailySpendingChart
 import com.settle.tracker.components.analytics.MonthlySpendingChart
+import com.settle.tracker.components.analytics.TopSpenders
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.scheme.GroupScheme
 
 @Composable
-fun PersonalAnalytics() {
+fun GroupAnalytics() {
     val db = Firebase.firestore
     val currentUser = Firebase.auth.currentUser
 
+    var groups by remember { mutableStateOf(emptyList<GroupScheme>()) }
+    var selectedGroup by remember { mutableStateOf<GroupScheme?>(null) }
     var expenses by remember { mutableStateOf(emptyList<ExpenseScheme>()) }
 
     LaunchedEffect(Unit) {
         if (currentUser == null) return@LaunchedEffect
 
         db
-            .collection("users")
-            .document(currentUser.uid)
+            .collection("groups")
+            .whereArrayContains("members", currentUser.uid)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+
+                groups = snapshot.toObjects(GroupScheme::class.java)
+                if (groups.isNotEmpty()) selectedGroup = groups.first()
+            }
+    }
+
+    LaunchedEffect(selectedGroup) {
+        if (selectedGroup == null) return@LaunchedEffect
+
+        db
+            .collection("groups")
+            .document(selectedGroup!!.id)
             .collection("expenses")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -58,6 +81,21 @@ fun PersonalAnalytics() {
         verticalArrangement = Arrangement.spacedBy(35.dp)
     ) {
         item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(groups, key = { it.id }) { group ->
+                    FilterChip(
+                        selected = selectedGroup?.id == group.id,
+                        onClick = { selectedGroup = group },
+                        label = { Text(group.groupName) }
+                    )
+                }
+            }
+        }
+
+        item {
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = "Monthly Spends",
@@ -72,13 +110,13 @@ fun PersonalAnalytics() {
         item {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = "Daily Spends",
+                text = "Top Spenders",
                 style = MaterialTheme.typography.bodyLarge
             )
         }
 
         item {
-            DailySpendingChart(expenses)
+            TopSpenders(expenses)
         }
 
         item {
