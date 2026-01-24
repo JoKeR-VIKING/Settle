@@ -89,7 +89,6 @@ fun BottomBar(
                             saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = screen.route != "account"
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(

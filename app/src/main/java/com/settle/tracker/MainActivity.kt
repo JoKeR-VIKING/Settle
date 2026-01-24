@@ -136,15 +136,13 @@ private fun AppContent(
     val googleAuthClient = remember { GoogleAuthClient(activity) }
     var currentUser by remember { mutableStateOf(googleAuthClient.getSignedInUser()) }
     val startDestination = remember {
-        if (currentUser == null) {
-            Screen.Login.route
-        } else if (
-            currentUser?.phoneNumber == null ||
-            currentUser?.phoneNumber?.isBlank() == true
-        ) {
-            Screen.PhoneVerification.route
-        } else {
-            Screen.Expenses.route
+        when {
+            currentUser == null ->
+                Screen.Login.route
+            currentUser?.phoneNumber.isNullOrBlank() ->
+                Screen.PhoneVerification.route
+            else ->
+                Screen.Expenses.route
         }
     }
 

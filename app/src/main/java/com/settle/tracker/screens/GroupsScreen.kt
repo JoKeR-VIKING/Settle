@@ -26,8 +26,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.LoadingScreenWrapper
@@ -68,7 +71,8 @@ fun GroupsScreen(
 
     val db = Firebase.firestore
 
-    var groupsWithBalance by remember { mutableStateOf<List<GroupWithBalance>>(emptyList()) }
+    var groupsWithBalance by remember { mutableStateOf<Map<String, GroupWithBalance>>(emptyMap()) }
+    val groupListener = remember { mutableStateMapOf<String, ListenerRegistration>() }
     var showGroupModal by remember { mutableStateOf(false) }
     var isFetching by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -122,37 +126,47 @@ fun GroupsScreen(
                 }
 
                 val groups = snapshot.toObjects(GroupScheme::class.java)
-                groupsWithBalance = emptyList()
 
                 groups.forEach { group ->
-                    db
-                        .collection("groups")
-                        .document(group.id)
-                        .collection("expenses")
-                        .addSnapshotListener { expenseSnap, e ->
-                            if (e != null) {
-                                Log.e("Firestore", "${e.message}")
-                                isFetching = false
-                                return@addSnapshotListener
+                    if (groupListener.containsKey(group.id)) return@forEach
+
+                    val registration =
+                        db
+                            .collection("groups")
+                            .document(group.id)
+                            .collection("expenses")
+                            .addSnapshotListener { expenseSnap, e ->
+                                if (e != null) {
+                                    Log.e("Firestore", "${e.message}")
+                                    isFetching = false
+                                    return@addSnapshotListener
+                                }
+
+                                val expenses =
+                                    expenseSnap?.toObjects(ExpenseScheme::class.java) ?: emptyList()
+                                val myBalance = calculateNetBalances(expenses)
+
+                                val updatedGroup = GroupWithBalance(
+                                    group = group,
+                                    balance = myBalance[currentUser.uid] ?: 0.0
+                                )
+
+                                groupsWithBalance =
+                                    groupsWithBalance + (group.id to updatedGroup)
                             }
 
-                            val expenses =
-                                expenseSnap?.toObjects(ExpenseScheme::class.java) ?: emptyList()
-                            val myBalance = calculateNetBalances(expenses)
-
-                            val updatedGroup = GroupWithBalance(
-                                group = group,
-                                balance = myBalance[currentUser.uid] ?: 0.0
-                            )
-
-                            groupsWithBalance = groupsWithBalance.filterNot {
-                                it.group.id == groupId
-                            } + updatedGroup
-                        }
+                    groupListener[group.id] = registration
                 }
 
                 isFetching = false
             }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            groupListener.values.forEach { it.remove() }
+            groupListener.clear()
+        }
     }
 
     LoadingScreenWrapper(
@@ -221,54 +235,57 @@ fun GroupsScreen(
                             .weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        groupsWithBalance.forEach { groupWithBalance ->
-                            item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(
-                                            onClick = { onOpenGroup(groupWithBalance.group.id) }
-                                        )
-                                        .padding(horizontal = 22.dp, vertical = 20.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(25.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Group,
-                                        contentDescription = "Group Icon",
-                                    )
-
-                                    Text(
-                                        groupWithBalance.group.groupName,
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        horizontalAlignment = Alignment.End,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        groupsWithBalance
+                            .values
+                            .sortedByDescending { it.group.createdAt }
+                            .forEach { groupWithBalance ->
+                                item {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(
+                                                onClick = { onOpenGroup(groupWithBalance.group.id) }
+                                            )
+                                            .padding(horizontal = 22.dp, vertical = 20.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(25.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = if (groupWithBalance.balance > 0.0) "You are owed" else "You owe",
-                                            style = MaterialTheme.typography.labelSmall
+                                        Icon(
+                                            imageVector = Icons.Filled.Group,
+                                            contentDescription = "Group Icon",
                                         )
 
                                         Text(
-                                            text = formatCurrency(groupWithBalance.balance.absoluteValue),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            letterSpacing = 0.3.sp,
-                                            color = (
-                                                if (groupWithBalance.balance > 0.0) MaterialTheme.colorScheme.surfaceBright
-                                                else if (groupWithBalance.balance < 0.0) MaterialTheme.colorScheme.error
-                                                else MaterialTheme.colorScheme.onSurface
-                                                ),
+                                            groupWithBalance.group.groupName,
+                                            style = MaterialTheme.typography.labelLarge
                                         )
+
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            horizontalAlignment = Alignment.End,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = if (groupWithBalance.balance > 0.0) "You are owed" else "You owe",
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+
+                                            Text(
+                                                text = formatCurrency(groupWithBalance.balance.absoluteValue),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                letterSpacing = 0.3.sp,
+                                                color = (
+                                                    if (groupWithBalance.balance > 0.0) MaterialTheme.colorScheme.surfaceBright
+                                                    else if (groupWithBalance.balance < 0.0) MaterialTheme.colorScheme.error
+                                                    else MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                            )
+                                        }
                                     }
-                                }
 
-                                HorizontalDivider(color = Color.Gray.copy(0.4f))
+                                    HorizontalDivider(color = Color.Gray.copy(0.4f))
+                                }
                             }
-                        }
                     }
                 }
             }
