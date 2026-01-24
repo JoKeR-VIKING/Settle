@@ -1,10 +1,10 @@
 package com.settle.tracker
 
-import org.junit.Test
+import com.settle.tracker.sms.SmsParse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-
-import com.settle.tracker.sms.SmsParse
+import org.junit.Assert.assertNull
+import org.junit.Test
 
 class SmsParserTest {
     val samples = listOf(
@@ -26,7 +26,11 @@ class SmsParserTest {
         "A/c *9889 Debited for Rs:10000.00 on 12-01-2026 19:05:22 by Mob Bk ref no 601282752712 Avl Bal Rs:2254.51.If not you, Call 1800222243 -Union Bank of India",
         "Payment of Rs 340.00 using Apay Balance successful at merchant. Updated Balance is Rs 5478.28 - If not u? call 180012001637 - SMS via Juspay",
         "Your Apay Wallet balance is debited for INR 904.00. Reference Number is 601382205052.If not u? call 180012001637 - SMS via Juspay\n",
-        "Rs.336.00 spent on your SBI Credit Card ending 3783 at RKKAAGRAROADKALYAN on 25/10/25. Trxn. not done by you? Report at https://sbicard.com/Dispute"
+        "Rs.336.00 spent on your SBI Credit Card ending 3783 at RKKAAGRAROADKALYAN on 25/10/25. Trxn. not done by you? Report at https://sbicard.com/Dispute",
+        "Important Update: HDFC Bank Card xx0971:\n" +
+                "Higher Rs. 1500000 Loan on Card at lower interest rate 0.84%. Check EMIs.\n" +
+                "https://hdfcbk.io/HDFCBK/s/XVwooJGg\n" +
+                "T&C"
     )
 
     @Test
@@ -91,7 +95,7 @@ class SmsParserTest {
         assertNotNull(expense)
 
         expense?.let {
-            assertEquals(expense.details, "".uppercase())
+            assertEquals(expense.details, "JX-UNIONB-S")
             assertEquals(expense.amount, 10000.00, 0.01)
             assertEquals(expense.paidFrom, "Bank A/C 9889")
         }
@@ -125,7 +129,7 @@ class SmsParserTest {
         assertNotNull(expense)
 
         expense?.let {
-            assertEquals(expense.details, "".uppercase())
+            assertEquals(expense.details, "JUSPAY")
             assertEquals(expense.amount, 904.00, 0.01)
             assertEquals(expense.paidFrom, "Wallet")
         }
@@ -142,9 +146,20 @@ class SmsParserTest {
         assertNotNull(expense)
 
         expense?.let {
-            assertEquals(expense.details, "RKKAAGRAROADKALYAN".uppercase())
+            assertEquals(expense.details, "RKKAAGRAROADKALYAN")
             assertEquals(expense.amount, 336.00, 0.01)
             assertEquals(expense.paidFrom, "Card 3783")
         }
+    }
+
+    @Test
+    fun testSpamSMS() {
+        val expense = SmsParse.parse(
+            "AD-HDFCBK-S",
+            samples[7],
+            System.currentTimeMillis()
+        )
+
+        assertNull(expense)
     }
 }

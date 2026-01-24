@@ -74,10 +74,7 @@ object SmsParse {
     ): ExpenseScheme? {
         val text = body.lowercase(Locale.getDefault())
 
-        if (
-            debitKeywords.none { text.contains(it) } &&
-            creditKeywords.any { text.contains(it) }
-        )
+        if (debitKeywords.none { text.contains(it) })
             return null
 
         val amount = extractAmount(text)

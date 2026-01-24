@@ -104,7 +104,6 @@ fun GroupsScreen(
 
     LaunchedEffect(Unit) {
         isFetching = true
-        groupsWithBalance = emptyList()
 
         db
             .collection("groups")
@@ -123,6 +122,7 @@ fun GroupsScreen(
                 }
 
                 val groups = snapshot.toObjects(GroupScheme::class.java)
+                groupsWithBalance = emptyList()
 
                 groups.forEach { group ->
                     db
@@ -140,10 +140,14 @@ fun GroupsScreen(
                                 expenseSnap?.toObjects(ExpenseScheme::class.java) ?: emptyList()
                             val myBalance = calculateNetBalances(expenses)
 
-                            groupsWithBalance += GroupWithBalance(
+                            val updatedGroup = GroupWithBalance(
                                 group = group,
                                 balance = myBalance[currentUser.uid] ?: 0.0
                             )
+
+                            groupsWithBalance = groupsWithBalance.filterNot {
+                                it.group.id == groupId
+                            } + updatedGroup
                         }
                 }
 

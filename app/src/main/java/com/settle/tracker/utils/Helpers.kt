@@ -28,8 +28,10 @@ import com.settle.tracker.scheme.RecurrenceType
 import com.settle.tracker.scheme.UserScheme
 import java.text.NumberFormat
 import java.time.Instant
+import java.time.Month
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 fun formatTimestamp(
@@ -218,4 +220,12 @@ fun calculateNextOccurrence(
     }
 
     return next.toInstant().toEpochMilli()
+}
+
+fun toFullMonthName(month: String): String {
+    val formatter = DateTimeFormatter.ofPattern("MMM", Locale.getDefault())
+
+    return Month
+        .from(formatter.parse(month))
+        .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
 }
