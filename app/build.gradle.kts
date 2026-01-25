@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
     implementation(libs.charty)
+    implementation(libs.vico.compose.m3)
     implementation(libs.androidx.fragment.ktx)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

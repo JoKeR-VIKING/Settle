@@ -46,10 +46,27 @@ fun formatTimestamp(
     return dateTime.format(formatter)
 }
 
-fun formatCurrency(amount: Double): String {
-    val indiaLocale = Locale.forLanguageTag("en-IN")
-    val formatter = NumberFormat.getCurrencyInstance(indiaLocale)
-    return formatter.format(amount)
+fun formatCurrency(
+    amount: Double,
+    compact: Boolean = false
+): String {
+    if (!compact) {
+        val indiaLocale = Locale.forLanguageTag("en-IN")
+        val formatter = NumberFormat.getCurrencyInstance(indiaLocale)
+        return formatter.format(amount)
+    }
+
+    val absAmount = kotlin.math.abs(amount)
+    val sign = if (amount < 0) "-" else ""
+
+    val formatted = when {
+        absAmount >= 1_000_000_000 -> String.format(Locale.getDefault(), "%.1fCr", absAmount / 1_000_000_000)
+        absAmount >= 1_000_000 -> String.format(Locale.getDefault(), "%.1fL", absAmount / 1_000_000)
+        absAmount >= 1_000 -> String.format(Locale.getDefault(), "%.1fK", absAmount / 1_000)
+        else -> absAmount.toInt().toString()
+    }
+
+    return sign + formatted.replace(".0", "")
 }
 
 @Composable

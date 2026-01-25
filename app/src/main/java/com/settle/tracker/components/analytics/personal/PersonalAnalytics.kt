@@ -53,7 +53,7 @@ fun PersonalAnalytics() {
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, top = 10.dp),
+            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(35.dp)
     ) {

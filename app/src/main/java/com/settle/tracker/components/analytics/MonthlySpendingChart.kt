@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,13 +23,18 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.himanshoe.charty.color.ChartyColor
-import com.himanshoe.charty.common.config.ChartScaffoldConfig
-import com.himanshoe.charty.common.config.ReferenceLineConfig
-import com.himanshoe.charty.common.tooltip.TooltipConfig
-import com.himanshoe.charty.line.LineChart
-import com.himanshoe.charty.line.config.LineChartConfig
-import com.himanshoe.charty.line.data.LineData
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.Insets
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.settle.tracker.components.analytics.personal.prepareMonthlyData
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
@@ -43,6 +49,31 @@ fun MonthlySpendingChart(
     if (expenses.size <= 1) return
 
     val monthlyChart = remember(expenses) { prepareMonthlyData(expenses) }
+    val modelProducer = remember { CartesianChartModelProducer() }
+
+    val markerLabel = rememberAxisLabelComponent(
+        style = MaterialTheme.typography.labelSmall,
+        padding = Insets(bottom = 14.dp)
+    )
+    val indicator = rememberShapeComponent(
+        shape = CircleShape,
+        fill = Fill(
+            MaterialTheme.colorScheme.primary
+        ),
+        strokeFill = Fill(
+            MaterialTheme.colorScheme.onSurface
+        )
+    )
+    val persistentMarker = remember {
+        DefaultCartesianMarker(
+            indicator = {
+                indicator
+            },
+            indicatorSize = 10.dp,
+            label = markerLabel,
+            labelPosition = DefaultCartesianMarker.LabelPosition.AbovePoint
+        )
+    }
 
     val averageAmount: Double =
         if (monthlyChart.isNotEmpty()) {
@@ -60,52 +91,96 @@ fun MonthlySpendingChart(
     val spikes = monthlyChart.filter { it.amount > spikeThreshold }
     val biggestSpike = spikes.maxByOrNull { it.amount }
 
+    LaunchedEffect(Unit) {
+        modelProducer.runTransaction {
+            lineSeries {
+                series(
+                    y = monthlyChart.map { it.amount }
+                )
+            }
+        }
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        LineChart(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .height(200.dp),
-            data = {
-                monthlyChart.map { point ->
-                    LineData(
-                        label = point.monthName,
-                        value = point.amount.toFloat()
-                    )
-                }
-            },
-            color = ChartyColor.Solid(MaterialTheme.colorScheme.primary),
-            lineConfig = LineChartConfig(
-                lineWidth = 2f,
-                showPoints = true,
-                smoothCurve = false,
-                pointRadius = 15f,
-                referenceLine = ReferenceLineConfig(
-                    value = averageAmount.toFloat(),
-                    label = "Average: ${formatCurrency(averageAmount)}",
-                    labelTextStyle = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+        CartesianChartHost(
+            rememberCartesianChart(
+                rememberLineCartesianLayer(),
+                startAxis = VerticalAxis.rememberStart(
+                    label = rememberAxisLabelComponent(
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     ),
-                    labelOffset = 10f
+                    valueFormatter = { _, value, _ ->
+                        formatCurrency(value, true)
+                    },
+                    guideline = null
                 ),
-                tooltipConfig = TooltipConfig(
-                    backgroundColor = MaterialTheme.colorScheme.primary
+                bottomAxis = HorizontalAxis.rememberBottom(
+                    label = rememberAxisLabelComponent(
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    ),
+                    valueFormatter = { _, value, _ ->
+                        monthlyChart[value.toInt()].monthName
+                    },
+                    guideline = null
                 ),
-                tooltipFormatter = { lineData ->
-                    formatCurrency(lineData.value.toDouble())
+                persistentMarkers = { _ ->
+                    monthlyChart.forEachIndexed { index, _ ->
+                        persistentMarker.at(index)
+                    }
                 }
             ),
-            onPointClick = {},
-            scaffoldConfig = ChartScaffoldConfig(
-                axisColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                labelTextStyle = MaterialTheme.typography.labelSmall.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                showGrid = false
-            )
+            modelProducer = modelProducer,
         )
+
+//        LineChart(
+//            modifier = Modifier
+//                .fillMaxWidth(0.9f)
+//                .height(200.dp),
+//            data = {
+//                monthlyChart.map { point ->
+//                    LineData(
+//                        label = point.monthName,
+//                        value = point.amount.toFloat()
+//                    )
+//                }
+//            },
+//            color = ChartyColor.Solid(MaterialTheme.colorScheme.primary),
+//            lineConfig = LineChartConfig(
+//                lineWidth = 2f,
+//                showPoints = true,
+//                smoothCurve = false,
+//                pointRadius = 15f,
+//                referenceLine = ReferenceLineConfig(
+//                    value = averageAmount.toFloat(),
+//                    label = "Average: ${formatCurrency(averageAmount)}",
+//                    labelTextStyle = MaterialTheme.typography.labelSmall.copy(
+//                        color = MaterialTheme.colorScheme.onSurfaceVariant
+//                    ),
+//                    labelOffset = 10f
+//                ),
+//                tooltipConfig = TooltipConfig(
+//                    backgroundColor = MaterialTheme.colorScheme.primary
+//                ),
+//                tooltipFormatter = { lineData ->
+//                    formatCurrency(lineData.value.toDouble())
+//                }
+//            ),
+//            onPointClick = {},
+//            scaffoldConfig = ChartScaffoldConfig(
+//                axisColor = MaterialTheme.colorScheme.onSurfaceVariant,
+//                labelTextStyle = MaterialTheme.typography.labelSmall.copy(
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant
+//                ),
+//                showGrid = false
+//            )
+//        )
 
         Column(
             horizontalAlignment = Alignment.Start,
