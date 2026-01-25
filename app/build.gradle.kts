@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 
     id("kotlin-parcelize")
@@ -33,28 +32,24 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-
-            firebaseAppDistributionDefault {
-                testers = "prathamvasani1@gmail.com, divyakhilari2003@gmail.com"
-            }
-        }
-        debug {
-            firebaseAppDistributionDefault {
-                testers = "prathamvasani1@gmail.com, divyakhilari2003@gmail.com"
-            }
         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlin {
-        jvmToolchain(17)
-    }
     buildFeatures {
         compose = true
         viewBinding = true
     }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+firebaseAppDistributionDefault {
+    testers = "prathamvasani1@gmail.com, divyakhilari2003@gmail.com"
 }
 
 dependencies {
@@ -80,11 +75,10 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.core.splashscreen)
-    implementation("com.google.android.play:integrity:1.6.0")
-    implementation("com.google.firebase:firebase-crashlytics")
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-messaging")
-    implementation("com.himanshoe:charty:3.0.0-rc01")
+    implementation(libs.integrity)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.messaging)
+    implementation(libs.charty)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

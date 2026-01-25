@@ -4,12 +4,13 @@ import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.Query
@@ -103,6 +103,7 @@ fun ExpensesScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
+        contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             FabMenu(
                 expanded = expanded,
@@ -113,11 +114,11 @@ fun ExpensesScreen(
                 onEditExpense = onEditExpense
             )
         },
-    ) {
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 16.dp)
+                .padding(innerPadding)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -125,7 +126,7 @@ fun ExpensesScreen(
                     focusManager.clearFocus()
                 },
         ) {
-            TabRow(
+            SecondaryTabRow(
                 selectedTabIndex = selectedTab.ordinal,
             ) {
                 Tab(

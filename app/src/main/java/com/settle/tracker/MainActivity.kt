@@ -83,9 +83,8 @@ class MainActivity : ComponentActivity() {
     private var mode by mutableStateOf<String?>(null)
     private var smsExpenseId by mutableStateOf<String?>(null)
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent ?: return
 
         setIntent(intent)
         updateIntent(intent)

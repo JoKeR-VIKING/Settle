@@ -42,7 +42,8 @@ object SmsParse {
             "amazon", "flipkart", "myntra",
             "zara", "h&m", "zudio", "westside",
             "pantaloons", "lifestyle", "max",
-            "clothing", "clothes", "fashion"
+            "clothing", "clothes", "fashion",
+            "croma", "digital", "electronics"
         ),
 
         ExpenseCategory.SUBSCRIPTION to listOf(
@@ -57,7 +58,7 @@ object SmsParse {
 
         ExpenseCategory.TRAVEL to listOf(
             "uber", "ola", "rapido", "nammayatri",
-            "cab", "taxi", "bike", "auto", "car"
+            "cab", "taxi", "bike", "auto"
         )
     )
     private val amountRegex = Regex("""(?i)(rs\.?|inr)\s*[:.]?\s*([\d,]+(?:\.\d{1,2})?)""")
