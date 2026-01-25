@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.settle.tracker.components.analytics.groups.GroupAnalytics
 import com.settle.tracker.components.analytics.personal.PersonalAnalytics
+import com.settle.tracker.components.analytics.trends.TrendsAnalytics
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,7 +80,7 @@ fun AnalyticsScreen() {
                 when (selectedSection) {
                     SideBarItems.PERSONAL -> PersonalAnalytics()
                     SideBarItems.GROUPS -> GroupAnalytics()
-                    SideBarItems.TRENDS -> {}
+                    SideBarItems.TRENDS -> TrendsAnalytics()
                 }
             }
         }
