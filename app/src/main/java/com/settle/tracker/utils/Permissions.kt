@@ -2,10 +2,12 @@ package com.settle.tracker.utils
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -15,6 +17,7 @@ class Permissions(
 ) : DefaultLifecycleObserver {
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private val permissions = arrayOf(
         Manifest.permission.RECEIVE_SMS,
         Manifest.permission.READ_SMS,
@@ -22,6 +25,7 @@ class Permissions(
         Manifest.permission.READ_CONTACTS
     )
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(owner: LifecycleOwner) {
         permissionLauncher = activity.registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
@@ -34,6 +38,7 @@ class Permissions(
         askPermissions()
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun askPermissions() {
         val permissionsToRequest = permissions.filter {
             ContextCompat
