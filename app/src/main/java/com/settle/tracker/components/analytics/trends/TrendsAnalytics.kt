@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
+import com.settle.tracker.components.analytics.CategorizedSpendingByPaymentMethodChart
 import com.settle.tracker.components.analytics.PaymentMethodSpendingChart
 import com.settle.tracker.scheme.ExpenseScheme
 
@@ -64,6 +65,18 @@ fun TrendsAnalytics() {
 
         item {
             PaymentMethodSpendingChart(expenses)
+        }
+
+        item {
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Categorized spends by Payment Method",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        item {
+            CategorizedSpendingByPaymentMethodChart(expenses)
         }
     }
 }

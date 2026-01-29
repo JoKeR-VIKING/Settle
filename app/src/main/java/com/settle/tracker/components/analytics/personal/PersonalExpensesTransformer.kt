@@ -1,9 +1,10 @@
 package com.settle.tracker.components.analytics.personal
 
 import android.icu.util.Calendar
-import com.himanshoe.charty.pie.data.PieData
+import com.settle.tracker.components.chart.PieData
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatTimestamp
+import com.settle.tracker.utils.getExpenseCategoryColor
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.YearMonth
@@ -111,7 +112,8 @@ fun prepareCategorizedData(
         .map { (category, list) ->
             PieData(
                 label = category,
-                value = list.sumOf { it.amount }.toFloat()
+                value = list.sumOf { it.amount }.toFloat(),
+                color = getExpenseCategoryColor(category)
             )
         }
         .sortedByDescending {

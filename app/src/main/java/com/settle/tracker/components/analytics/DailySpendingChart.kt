@@ -2,12 +2,9 @@ package com.settle.tracker.components.analytics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -28,18 +25,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.himanshoe.charty.bar.BarChart
-import com.himanshoe.charty.bar.config.BarChartConfig
-import com.himanshoe.charty.bar.data.BarData
-import com.himanshoe.charty.color.ChartyColor
-import com.himanshoe.charty.common.config.Animation
-import com.himanshoe.charty.common.config.ChartScaffoldConfig
-import com.himanshoe.charty.common.config.CornerRadius
-import com.himanshoe.charty.common.config.ReferenceLineConfig
-import com.himanshoe.charty.common.tooltip.TooltipConfig
 import com.settle.tracker.components.analytics.personal.getHighestSpendingWeekday
 import com.settle.tracker.components.analytics.personal.getLowestSpendingWeekday
 import com.settle.tracker.components.analytics.personal.prepareDailyData
+import com.settle.tracker.components.chart.BarChart
+import com.settle.tracker.components.chart.BarData
+import com.settle.tracker.components.chart.ReferenceLineConfig
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
 
@@ -79,53 +70,30 @@ fun DailySpendingChart(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        LazyRow(
-            state = listState,
-            contentPadding = PaddingValues(start = 20.dp)
-        ) {
-            item {
-                BarChart(
-                    modifier = Modifier
-                        .width((dailyData.size * 60).dp)
-                        .height(200.dp),
-                    data = {
-                        dailyData.map { point ->
-                            BarData(
-                                label = point.date,
-                                value = point.amount.toFloat()
-                            )
-                        }
-                    },
-                    color = ChartyColor.Solid(MaterialTheme.colorScheme.primary),
-                    barConfig = BarChartConfig(
-                        barWidthFraction = 0.6f,
-                        cornerRadius = CornerRadius.ExtraLarge,
-                        animation = Animation.Enabled(),
-                        referenceLine = ReferenceLineConfig(
-                            value = averageAmount.toFloat(),
-                            label = "",
-                            labelTextStyle = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            labelOffset = 10f
-                        ),
-                        tooltipConfig = TooltipConfig(
-                            backgroundColor = MaterialTheme.colorScheme.secondary
-                        ),
-                        tooltipFormatter = { lineData ->
-                            formatCurrency(lineData.value.toDouble())
-                        }
-                    ),
-                    onBarClick = {},
-                    scaffoldConfig = ChartScaffoldConfig(
-                        axisColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        labelTextStyle = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
+        BarChart(
+            modifier = Modifier.height(250.dp),
+            xAxisData = dailyData.map { it.date },
+            bars = dailyData.map {
+                BarData(
+                    barValues = listOf(it.amount.toFloat()),
+                    barColors = listOf(MaterialTheme.colorScheme.primary)
                 )
-            }
-        }
+            },
+            tooltipTextStyle = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            tooltipFormatter = { formatCurrency(it.toDouble()) },
+            referenceLine = ReferenceLineConfig(
+                referenceLineValue = averageAmount.toFloat(),
+                referenceLineColor = MaterialTheme.colorScheme.error,
+                referenceLineLabel = "",
+                referenceLineTextStyle = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        )
 
         Column(
             horizontalAlignment = Alignment.Start,

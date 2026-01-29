@@ -246,3 +246,11 @@ fun toFullMonthName(month: String): String {
         .from(formatter.parse(month))
         .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
 }
+
+fun colorFromString(key: String): Color {
+    val hash = key.hashCode()
+    val r = (hash shr 16 and 0xFF) / 255f
+    val g = (hash shr 8 and 0xFF) / 255f
+    val b = (hash and 0xFF) / 255f
+    return Color(r, g, b, 1f)
+}

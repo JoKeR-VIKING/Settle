@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -25,13 +24,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.himanshoe.charty.color.ChartyColor
-import com.himanshoe.charty.pie.PieChart
-import com.himanshoe.charty.pie.config.LabelConfig
-import com.himanshoe.charty.pie.config.PieChartConfig
-import com.himanshoe.charty.pie.config.PieChartStyle
 import com.settle.tracker.components.analytics.personal.getHighestCategorySpend
 import com.settle.tracker.components.analytics.personal.prepareCategorizedData
+import com.settle.tracker.components.chart.PieChart
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.getExpenseCategoryColor
 import kotlin.math.roundToInt
@@ -43,11 +38,6 @@ fun CategorizedSpendingChart(
     if (expenses.size <= 1) return
 
     val categorizedData = remember(expenses) { prepareCategorizedData(expenses) }
-    val pieColors = remember(categorizedData) {
-        categorizedData.map { data ->
-            getExpenseCategoryColor(data.label)
-        }
-    }
 
     val highestCategorySpends = remember(expenses) {
         getHighestCategorySpend(expenses)
@@ -58,25 +48,10 @@ fun CategorizedSpendingChart(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         PieChart(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp),
-            color = ChartyColor.Gradient(
-                pieColors
-            ),
-            data = {
-                categorizedData
-            },
-            config = PieChartConfig(
-                style = PieChartStyle.DONUT,
-                donutHoleRatio = 0.5f,
-                labelConfig = LabelConfig(
-                    minimumPercentageToShowLabel = 8f,
-                    labelTextStyle = MaterialTheme.typography.labelMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-            )
+            modifier = Modifier.size(250.dp),
+            data = categorizedData,
+            donutMode = true,
+            showPercentage = true
         )
 
         FlowRow(

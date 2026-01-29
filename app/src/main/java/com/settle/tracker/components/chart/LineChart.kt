@@ -47,13 +47,6 @@ enum class LineType {
     CURVED
 }
 
-data class ReferenceLineConfig(
-    val referenceLineValue: Float,
-    val referenceLineColor: Color,
-    val referenceLineLabel: String,
-    val referenceLineTextStyle: TextStyle
-)
-
 @Composable
 fun LineChart(
     modifier: Modifier = Modifier,
@@ -295,38 +288,6 @@ fun LineChart(
                         )
                     }
 
-                    if (referenceLine != null) {
-                        val referenceY = chartHeight - chartHeight * (referenceLine.referenceLineValue / maxValue)
-                        val referencePadding = 8f
-
-                        drawLine(
-                            color = referenceLine.referenceLineColor,
-                            start = Offset(
-                                x = paddingLeft,
-                                y = referenceY
-                            ),
-                            end = Offset(
-                                x = chartWidth + paddingLeft + xStartOffset,
-                                y = referenceY
-                            ),
-                            strokeWidth = 2f,
-                            pathEffect = dashedEffect
-                        )
-
-                        val referenceLineText = textMeasurer.measure(
-                            text = referenceLine.referenceLineLabel,
-                            style = referenceLine.referenceLineTextStyle
-                        )
-
-                        drawText(
-                            textLayoutResult = referenceLineText,
-                            topLeft = Offset(
-                                x = paddingLeft + xStartOffset,
-                                y = referenceY - referenceLineText.size.height - referencePadding
-                            )
-                        )
-                    }
-
                     val label = xAxisData?.get(i) ?: i.toString()
                     val text = textMeasurer.measure(label, labelStyle)
 
@@ -341,6 +302,38 @@ fun LineChart(
                         topLeft = Offset(
                             x = labelX,
                             y = chartHeight + paddingBottom
+                        )
+                    )
+                }
+
+                if (referenceLine != null) {
+                    val referenceY = chartHeight - chartHeight * (referenceLine.referenceLineValue / maxValue)
+                    val referencePadding = 8f
+
+                    drawLine(
+                        color = referenceLine.referenceLineColor,
+                        start = Offset(
+                            x = paddingLeft,
+                            y = referenceY
+                        ),
+                        end = Offset(
+                            x = chartWidth + paddingLeft + xStartOffset,
+                            y = referenceY
+                        ),
+                        strokeWidth = 2f,
+                        pathEffect = dashedEffect
+                    )
+
+                    val referenceLineText = textMeasurer.measure(
+                        text = referenceLine.referenceLineLabel,
+                        style = referenceLine.referenceLineTextStyle
+                    )
+
+                    drawText(
+                        textLayoutResult = referenceLineText,
+                        topLeft = Offset(
+                            x = paddingLeft + xStartOffset,
+                            y = referenceY - referenceLineText.size.height - referencePadding
                         )
                     )
                 }
