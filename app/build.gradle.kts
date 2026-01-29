@@ -19,8 +19,8 @@ android {
         applicationId = "com.settle.tracker"
         minSdk = 30
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.1.2"
+        versionCode = 13
+        versionName = "1.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -78,7 +78,6 @@ dependencies {
     implementation(libs.integrity)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
-    implementation(libs.charty)
     implementation(libs.androidx.fragment.ktx)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
