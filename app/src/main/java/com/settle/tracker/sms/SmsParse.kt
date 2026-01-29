@@ -9,14 +9,14 @@ object SmsParse {
     private val debitKeywords =
         listOf("spent", "debit", "debited", "txn", "sent", "paid", "payment")
     private val creditKeywords = listOf(
-        "credit",
         "credited",
+        "receive",
         "received",
         "deposited",
         "added",
         "refund",
         "reversal",
-        "cashback"
+        "cashback",
     )
     private val categoryKeywords: Map<ExpenseCategory, List<String>> = mapOf(
         ExpenseCategory.FOOD to listOf(
@@ -75,7 +75,7 @@ object SmsParse {
     ): ExpenseScheme? {
         val text = body.lowercase(Locale.getDefault())
 
-        if (debitKeywords.none { text.contains(it) })
+        if (debitKeywords.none { text.contains(it) } || creditKeywords.any { text.contains(it) })
             return null
 
         val amount = extractAmount(text)

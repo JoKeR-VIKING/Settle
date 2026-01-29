@@ -22,14 +22,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.himanshoe.charty.color.ChartyColor
-import com.himanshoe.charty.common.config.ChartScaffoldConfig
-import com.himanshoe.charty.common.config.ReferenceLineConfig
-import com.himanshoe.charty.common.tooltip.TooltipConfig
-import com.himanshoe.charty.line.LineChart
-import com.himanshoe.charty.line.config.LineChartConfig
-import com.himanshoe.charty.line.data.LineData
 import com.settle.tracker.components.analytics.personal.prepareMonthlyData
+import com.settle.tracker.components.chart.LineChart
+import com.settle.tracker.components.chart.ReferenceLineConfig
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.toFullMonthName
@@ -65,45 +60,24 @@ fun MonthlySpendingChart(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         LineChart(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .height(200.dp),
-            data = {
-                monthlyChart.map { point ->
-                    LineData(
-                        label = point.monthName,
-                        value = point.amount.toFloat()
-                    )
-                }
-            },
-            color = ChartyColor.Solid(MaterialTheme.colorScheme.primary),
-            lineConfig = LineChartConfig(
-                lineWidth = 2f,
-                showPoints = true,
-                smoothCurve = false,
-                pointRadius = 15f,
-                referenceLine = ReferenceLineConfig(
-                    value = averageAmount.toFloat(),
-                    label = "Average: ${formatCurrency(averageAmount)}",
-                    labelTextStyle = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    labelOffset = 10f
-                ),
-                tooltipConfig = TooltipConfig(
-                    backgroundColor = MaterialTheme.colorScheme.primary
-                ),
-                tooltipFormatter = { lineData ->
-                    formatCurrency(lineData.value.toDouble())
-                }
+            modifier = Modifier.height(250.dp),
+            xAxisData = monthlyChart.map { it.monthName },
+            points = monthlyChart.map { it.amount.toFloat() },
+            pointRadius = 14f,
+            tooltipTextStyle = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             ),
-            onPointClick = {},
-            scaffoldConfig = ChartScaffoldConfig(
-                axisColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                labelTextStyle = MaterialTheme.typography.labelSmall.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                showGrid = false
+            tooltipFormatter = { formatCurrency(it.toDouble()) },
+            showVerticalGrid = false,
+            referenceLine = ReferenceLineConfig(
+                referenceLineValue =  averageAmount.toFloat(),
+                referenceLineColor = MaterialTheme.colorScheme.error,
+                referenceLineLabel = "Average Spending",
+                referenceLineTextStyle = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             )
         )
 
