@@ -53,6 +53,11 @@ export const processRecurring = onSchedule(
             const template = doc.data()
             const templateRef = doc.ref
 
+            if (template.endAt && template.nextOccurrenceAt > template.endAt) {
+                await templateRef.delete()
+                continue
+            }
+
             const path = templateRef.path.split('/')
             const ownerCollection = path[0]
             const ownerId = path[1]

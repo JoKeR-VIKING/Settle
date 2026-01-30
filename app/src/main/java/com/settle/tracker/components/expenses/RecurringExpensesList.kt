@@ -255,6 +255,26 @@ fun RecurringExpensesList(
                             )
                         )
 
+                        if (template.durationInMonths != null && template.endAt != null) {
+                            Text(
+                                text = "EMI of: ${template.durationInMonths} months",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
+                            )
+
+                            Text(
+                                text = "Ends On: ${formatTimestamp(template.endAt, "dd MMM YYYY")}",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
+                            )
+                        }
+
                         Text(
                             text = "Runs: ${RecurrenceType.valueOf(template.frequency).getDisplayName()}",
                             style = MaterialTheme.typography.labelMedium.copy(

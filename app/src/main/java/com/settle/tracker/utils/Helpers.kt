@@ -254,3 +254,18 @@ fun colorFromString(key: String): Color {
     val b = (hash and 0xFF) / 255f
     return Color(r, g, b, 1f)
 }
+
+fun calculateEndAt(
+    startAt: Long,
+    durationInMonths: Int?
+): Long? {
+    if (durationInMonths == null) return null
+
+    return Instant.ofEpochMilli(startAt)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .plusMonths((durationInMonths - 1).toLong())
+        .atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli()
+}

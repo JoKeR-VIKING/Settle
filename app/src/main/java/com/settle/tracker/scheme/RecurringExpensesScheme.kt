@@ -23,6 +23,8 @@ data class RecurringExpensesScheme(
     val startAt: Long = 0L,
     val nextOccurrenceAt: Long = 0L,
     val paused: Boolean = false,
+    val durationInMonths: Int? = null,
+    val endAt: Long? = null,
 
     val createdAt: Long = 0L
 )

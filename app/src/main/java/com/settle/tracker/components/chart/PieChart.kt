@@ -29,7 +29,7 @@ fun PieChart(
     donutMode: Boolean = false,
     donutHole: Float = 0.5f,
     showPercentage: Boolean = false,
-    minPercentageToShow: Float = 5f,
+    minPercentageToShow: Float = 10f,
     showValue: Boolean = false,
     textStyle: TextStyle = MaterialTheme.typography.labelMedium.copy(
         color = MaterialTheme.colorScheme.onSurface

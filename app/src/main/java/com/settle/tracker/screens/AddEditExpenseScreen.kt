@@ -67,6 +67,7 @@ import com.settle.tracker.scheme.RecurrenceType
 import com.settle.tracker.scheme.RecurringExpensesScheme
 import com.settle.tracker.scheme.SplitMode
 import com.settle.tracker.scheme.SplitParticipant
+import com.settle.tracker.utils.calculateEndAt
 import com.settle.tracker.utils.calculateNextOccurrence
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
@@ -75,6 +76,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.Locale
 import java.util.UUID
 import kotlin.math.abs
 
@@ -120,6 +122,7 @@ fun AddEditExpenseScreen(
     var recurringTemplateId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var isRecurring by remember { mutableStateOf(false) }
     var frequency by remember { mutableStateOf(RecurrenceType.MONTHLY) }
+    var durationInMonths by remember { mutableStateOf<Int?>(null) }
 
     var showDatePickerModal by remember { mutableStateOf(false) }
     var showCategoryPickerModal by remember { mutableStateOf(false) }
@@ -213,6 +216,11 @@ fun AddEditExpenseScreen(
                                 from = (datePickerState.selectedDateMillis ?: System.currentTimeMillis()),
                                 after = frequency
                             ),
+                            durationInMonths = durationInMonths,
+                            endAt = calculateEndAt(
+                                startAt = (datePickerState.selectedDateMillis ?: System.currentTimeMillis()),
+                                durationInMonths = durationInMonths
+                            ),
                             paused = false,
                             createdAt = System.currentTimeMillis()
                         )
@@ -265,7 +273,7 @@ fun AddEditExpenseScreen(
 
                         id = expense.id
                         expenseDescription = TextFieldValue(expense.details)
-                        amount = String.format("%.2f", expense.amount)
+                        amount = String.format(Locale.getDefault(), "%.2f", expense.amount)
                         displayAmount = formatCurrency(expense.amount)
                         category = ExpenseCategory.valueOf(expense.category)
                         paidFrom = expense.paidFrom
@@ -500,7 +508,9 @@ fun AddEditExpenseScreen(
                                 isRecurring = isRecurring,
                                 toggleIsRecurring = { isRecurring = it },
                                 frequency = frequency,
-                                onFrequencyChange = { frequency = it }
+                                durationInMonths = durationInMonths,
+                                onFrequencyChange = { frequency = it },
+                                onDurationChange = { durationInMonths = it }
                             )
                         }
                     }

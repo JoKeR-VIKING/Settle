@@ -427,11 +427,14 @@ fun RecurringExpenseField(
     isRecurring: Boolean,
     toggleIsRecurring: (Boolean) -> Unit,
     frequency: RecurrenceType,
-    onFrequencyChange: (RecurrenceType) -> Unit
+    durationInMonths: Int?,
+    onFrequencyChange: (RecurrenceType) -> Unit,
+    onDurationChange: (Int) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(0.95f),
@@ -471,6 +474,39 @@ fun RecurringExpenseField(
                         selected = frequency == type,
                         onClick = { onFrequencyChange(type) }
                     )
+                }
+            }
+
+            if (frequency == RecurrenceType.MONTHLY) {
+                Text(
+                    modifier = Modifier.fillMaxWidth(0.95f),
+                    text = "EMI transaction?",
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Start
+                )
+
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth(0.95f)
+                ) {
+                    listOf(3, 6, 9, 12).forEachIndexed { index, duration ->
+                        SegmentedButton(
+                            label = {
+                                Text(
+                                    text = "$duration\nmonths",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 2,
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            icon = {},
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = RecurrenceType.entries.size
+                            ),
+                            selected = durationInMonths == duration,
+                            onClick = { onDurationChange(duration) }
+                        )
+                    }
                 }
             }
         }
