@@ -222,12 +222,20 @@ fun LoginScreen(
                             androidx.compose.foundation.layout.Row(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.google_logo),
-                                    contentDescription = "Google Logo",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(Modifier.width(10.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(Color.White),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.google_logo),
+                                        contentDescription = "Google Logo",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
                                 Text(
                                     "Continue with Google",
                                     style = MaterialTheme.typography.labelLarge,

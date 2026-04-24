@@ -1,9 +1,6 @@
 package com.settle.tracker.screens
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -208,38 +205,33 @@ fun GroupsScreen(
 
 @Composable
 private fun GroupsHeader() {
-    AnimatedVisibility(
-        visible = true,
-        enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 3 })
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
+        Text(
+            text = "Groups",
+            style = MaterialTheme.typography.displayMedium,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(listOf(BrandTeal, BrandBlue))
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Groups",
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.ExtraBold
+            Icon(
+                Icons.Filled.GroupAdd,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(20.dp)
             )
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(listOf(BrandTeal, BrandBlue))
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Filled.GroupAdd,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
         }
     }
 }

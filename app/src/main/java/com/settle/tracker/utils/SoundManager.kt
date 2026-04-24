@@ -8,17 +8,15 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
  * Ultra-light sound & haptics manager. Uses the built-in ToneGenerator so no
- * asset/file is needed — works out of the box for every device.
- *
- * Sound volume is intentionally ~30% so taps feel subtle, not noisy.
+ * asset/file is needed. Must be created ONCE per app (it allocates an audio
+ * system resource). Share via [LocalSoundManager].
  */
 class SoundManager(context: Context) {
-    private val tone = try {
+    private val tone: ToneGenerator? = try {
         ToneGenerator(AudioManager.STREAM_MUSIC, 30)
     } catch (e: Exception) {
         null
@@ -34,25 +32,10 @@ class SoundManager(context: Context) {
         }
     } catch (_: Exception) { null }
 
-    fun tap() {
-        safeTone(ToneGenerator.TONE_PROP_PROMPT, 40)
-        vibrate(8)
-    }
-
-    fun success() {
-        safeTone(ToneGenerator.TONE_PROP_ACK, 120)
-        vibrate(20)
-    }
-
-    fun error() {
-        safeTone(ToneGenerator.TONE_PROP_NACK, 150)
-        vibrate(40)
-    }
-
-    fun delete() {
-        safeTone(ToneGenerator.TONE_PROP_BEEP2, 80)
-        vibrate(12)
-    }
+    fun tap() { safeTone(ToneGenerator.TONE_PROP_PROMPT, 40); vibrate(8) }
+    fun success() { safeTone(ToneGenerator.TONE_PROP_ACK, 120); vibrate(20) }
+    fun error() { safeTone(ToneGenerator.TONE_PROP_NACK, 150); vibrate(40) }
+    fun delete() { safeTone(ToneGenerator.TONE_PROP_BEEP2, 80); vibrate(12) }
 
     private fun safeTone(type: Int, ms: Int) {
         try { tone?.startTone(type, ms) } catch (_: Exception) {}
@@ -72,8 +55,15 @@ class SoundManager(context: Context) {
     fun release() = try { tone?.release() } catch (_: Exception) {}
 }
 
-@Composable
-fun rememberSoundManager(): SoundManager {
-    val ctx = LocalContext.current
-    return remember { SoundManager(ctx.applicationContext) }
+/**
+ * Use this CompositionLocal everywhere – avoids allocating a ToneGenerator per
+ * row in LazyColumns (which was making scrolling extremely laggy).
+ */
+val LocalSoundManager = staticCompositionLocalOf<SoundManager> {
+    error("LocalSoundManager not provided. Wrap content in CompositionLocalProvider.")
 }
+
+/** Shorthand reader. */
+@Composable
+fun rememberSoundManager(): SoundManager = LocalSoundManager.current
+

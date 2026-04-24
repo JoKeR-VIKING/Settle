@@ -1,9 +1,6 @@
 package com.settle.tracker.screens
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -119,6 +116,17 @@ fun ExpensesScreen(
             }
     }
 
+    val totalThisMonth = remember(expenses) {
+        val now = java.util.Calendar.getInstance()
+        val m = now.get(java.util.Calendar.MONTH)
+        val y = now.get(java.util.Calendar.YEAR)
+        expenses.filter {
+            val c = java.util.Calendar.getInstance()
+            c.timeInMillis = it.timestamp
+            c.get(java.util.Calendar.MONTH) == m && c.get(java.util.Calendar.YEAR) == y
+        }.sumOf { it.amount }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0),
@@ -142,12 +150,7 @@ fun ExpensesScreen(
         ) {
             GreetingHero(
                 name = currentUser.displayName ?: "there",
-                totalThisMonth = expenses.filter {
-                    val cal = java.util.Calendar.getInstance()
-                    val now = cal.get(java.util.Calendar.MONTH) to cal.get(java.util.Calendar.YEAR)
-                    cal.timeInMillis = it.timestamp
-                    (cal.get(java.util.Calendar.MONTH) to cal.get(java.util.Calendar.YEAR)) == now
-                }.sumOf { it.amount }
+                totalThisMonth = totalThisMonth
             )
 
             // Tab row – custom pill
@@ -196,11 +199,7 @@ fun ExpensesScreen(
 
 @Composable
 private fun GreetingHero(name: String, totalThisMonth: Double) {
-    AnimatedVisibility(
-        visible = true,
-        enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 3 })
-    ) {
-        Box(
+    Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp)
@@ -253,7 +252,6 @@ private fun GreetingHero(name: String, totalThisMonth: Double) {
                 }
             }
         }
-    }
 }
 
 @Composable

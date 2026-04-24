@@ -47,9 +47,12 @@ import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.ui.theme.SettleTheme
 import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.SettlePermission
+import com.settle.tracker.utils.SoundManager
+import com.settle.tracker.utils.LocalSoundManager
 import com.settle.tracker.utils.createSmsNotificationChannel
 import com.settle.tracker.utils.rememberPermissionRequester
 import com.settle.tracker.utils.saveTokenToFirestore
+import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
@@ -138,6 +141,7 @@ private fun AppContent(
     val showBottomBar = currentRoute in BottomBarScreen.routes
 
     val googleAuthClient = remember { GoogleAuthClient(activity) }
+    val soundManager = remember { SoundManager(activity.applicationContext) }
     var currentUser by remember { mutableStateOf(googleAuthClient.getSignedInUser()) }
     val startDestination = remember {
         when {
@@ -227,6 +231,7 @@ private fun AppContent(
     }
 
     SettleTheme {
+        CompositionLocalProvider(LocalSoundManager provides soundManager) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
@@ -379,5 +384,6 @@ private fun AppContent(
                 }
             }
         }
+        } // CompositionLocalProvider
     }
 }

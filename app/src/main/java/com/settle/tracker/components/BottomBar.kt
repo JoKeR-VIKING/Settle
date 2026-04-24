@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -83,10 +84,15 @@ fun BottomBar(
     ) {
         screens.forEach { screen ->
             val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+            val weight by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (selected) 1.8f else 1f,
+                animationSpec = androidx.compose.animation.core.tween(260),
+                label = "bb-weight"
+            )
             BottomBarItem(
                 screen = screen,
                 selected = selected,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(weight),
                 onClick = {
                     if (!selected) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -149,8 +155,11 @@ private fun BottomBarItem(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         screen.title,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        maxLines = 1,
+                        softWrap = false,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                     )
                 }
             }
