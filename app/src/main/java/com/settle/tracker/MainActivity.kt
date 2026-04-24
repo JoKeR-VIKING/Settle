@@ -6,10 +6,11 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -239,25 +240,25 @@ private fun AppContent(
                     navController = navController,
                     startDestination = startDestination,
                     enterTransition = {
-                        slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Left,
-                            animationSpec = tween(320)
-                        ) + fadeIn(tween(320))
+                        fadeIn(tween(300)) + scaleIn(
+                            initialScale = 0.98f,
+                            animationSpec = tween(300)
+                        )
                     },
                     exitTransition = {
                         fadeOut(tween(220))
                     },
                     popEnterTransition = {
-                        slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Right,
-                            animationSpec = tween(320)
-                        ) + fadeIn(tween(320))
+                        fadeIn(tween(300)) + scaleIn(
+                            initialScale = 1.02f,
+                            animationSpec = tween(300)
+                        )
                     },
                     popExitTransition = {
-                        slideOutOfContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Right,
-                            animationSpec = tween(320)
-                        ) + fadeOut(tween(220))
+                        fadeOut(tween(220)) + scaleOut(
+                            targetScale = 0.98f,
+                            animationSpec = tween(220)
+                        )
                     }
                 ) {
                     composable(Screen.Login.route) {
