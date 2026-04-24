@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -35,8 +36,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.settle.tracker.ui.theme.AccentButter
@@ -44,21 +47,17 @@ import com.settle.tracker.ui.theme.BrandBlue
 import com.settle.tracker.ui.theme.BrandTeal
 
 data class CoachStep(
+    val icon: ImageVector,
     val title: String,
-    val body: String
+    val body: String,
 )
 
-/**
- * Minimal, celebratory first-run tutorial overlay.
- * Drops a scrim + a centered "bubble" card the user pages through.
- *
- * Theming uses brand gradient for the header strip.
- */
 @Composable
 fun CoachMarkOverlay(
     visible: Boolean,
     steps: List<CoachStep>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    title: String? = null,
 ) {
     var index by remember { mutableIntStateOf(0) }
     var internallyVisible by remember { mutableStateOf(visible) }
@@ -73,7 +72,7 @@ fun CoachMarkOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.55f))
+                .background(Color.Black.copy(alpha = 0.58f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -86,80 +85,117 @@ fun CoachMarkOverlay(
                 modifier = Modifier
                     .padding(24.dp)
                     .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(24.dp)
-                    )
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
+                // Header strip with brand gradient + sparkle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(70.dp)
+                        .height(78.dp)
                         .background(
                             brush = Brush.horizontalGradient(
                                 listOf(BrandTeal, BrandBlue)
-                            ),
-                            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                            )
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.AutoAwesome,
-                        contentDescription = null,
-                        tint = AccentButter,
-                        modifier = Modifier.size(30.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.AutoAwesome,
+                            contentDescription = null,
+                            tint = AccentButter,
+                            modifier = Modifier.size(26.dp)
+                        )
+                        Spacer(Modifier.size(10.dp))
+                        Text(
+                            title ?: "Quick tour",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Column(
                     modifier = Modifier.padding(22.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        step.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        step.body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(Modifier.height(6.dp))
-
-                    // step dots
+                    // Step icon chip + title/body
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        steps.forEachIndexed { i, _ ->
-                            Box(
-                                modifier = Modifier
-                                    .size(if (i == index) 10.dp else 7.dp)
-                                    .background(
-                                        color = if (i == index)
-                                            MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outlineVariant,
-                                        shape = androidx.compose.foundation.shape.CircleShape
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            BrandTeal.copy(alpha = 0.18f),
+                                            BrandBlue.copy(alpha = 0.18f)
+                                        )
                                     )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = step.icon,
+                                contentDescription = null,
+                                tint = BrandTeal,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                step.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                step.body,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    // step dots
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        steps.forEachIndexed { i, _ ->
+                            Box(
+                                modifier = Modifier
+                                    .size(if (i == index) 10.dp else 7.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (i == index) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outlineVariant
+                                    )
+                            )
+                        }
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = onDismiss) {
-                            Text("Skip", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = {
+                            index = 0
+                            onDismiss()
+                        }) {
+                            Text("Skip tour", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Button(
                             onClick = {
-                                if (index >= steps.size - 1) onDismiss()
-                                else index += 1
+                                if (index >= steps.size - 1) {
+                                    index = 0
+                                    onDismiss()
+                                } else {
+                                    index += 1
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
@@ -168,8 +204,9 @@ fun CoachMarkOverlay(
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Text(
-                                if (index >= steps.size - 1) "Got it" else "Next",
-                                style = MaterialTheme.typography.labelLarge
+                                if (index >= steps.size - 1) "Got it!" else "Next",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }

@@ -27,6 +27,7 @@ class SettlePrefs(context: Context) {
     companion object {
         const val TUTORIAL_EXPENSES = "tutorial_expenses"
         const val TUTORIAL_GROUPS = "tutorial_groups"
+        const val TUTORIAL_ANALYTICS = "tutorial_analytics"
         const val PROMPT_NOTIFICATIONS = "prompt_notifications"
     }
 }

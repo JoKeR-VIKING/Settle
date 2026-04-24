@@ -191,9 +191,23 @@ fun GroupsScreen(
 
         CoachMarkOverlay(
             visible = showCoach && !isFetching,
+            title = "Your groups",
             steps = listOf(
-                CoachStep("Your groups live here", "Create a group for trips, roommates, or any shared expense."),
-                CoachStep("See balances at a glance", "Each group shows if you owe or are owed money, instantly."),
+                CoachStep(
+                    icon = androidx.compose.material.icons.Icons.Filled.GroupAdd,
+                    title = "Start a new group",
+                    body = "Tap the \"Start a new group\" card at the top to create a shared expense group — like trips, flatmates, or a dinner night."
+                ),
+                CoachStep(
+                    icon = androidx.compose.material.icons.Icons.Filled.Balance,
+                    title = "See balances instantly",
+                    body = "Each group shows whether you owe or are owed — green means you lent, red means you owe."
+                ),
+                CoachStep(
+                    icon = androidx.compose.material.icons.Icons.Filled.TouchApp,
+                    title = "Tap a group to open",
+                    body = "Inside a group you can add expenses split across members, and settle up in one tap."
+                ),
             ),
             onDismiss = {
                 showCoach = false

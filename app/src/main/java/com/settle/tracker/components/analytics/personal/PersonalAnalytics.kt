@@ -2,14 +2,14 @@ package com.settle.tracker.components.analytics.personal
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.QueryStats
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +23,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.analytics.CategorizedSpendingChart
+import com.settle.tracker.components.analytics.ChartCard
 import com.settle.tracker.components.analytics.DailySpendingChart
 import com.settle.tracker.components.analytics.MonthlySpendingChart
 import com.settle.tracker.components.common.EmptyState
@@ -38,11 +39,7 @@ fun PersonalAnalytics() {
 
     LaunchedEffect(Unit) {
         if (currentUser == null) return@LaunchedEffect
-
-        db
-            .collection("users")
-            .document(currentUser.uid)
-            .collection("expenses")
+        db.collection("users").document(currentUser.uid).collection("expenses")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e("Firestore", "${error.message}")
@@ -65,37 +62,31 @@ fun PersonalAnalytics() {
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(28.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Monthly Spends",
-                style = MaterialTheme.typography.titleMedium
-            )
+            ChartCard(
+                title = "Monthly Spends",
+                subtitle = "Trend across recent months",
+                icon = Icons.Filled.CalendarMonth
+            ) { MonthlySpendingChart(expenses) }
         }
-        item { MonthlySpendingChart(expenses) }
-
         item {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Daily Spends",
-                style = MaterialTheme.typography.titleMedium
-            )
+            ChartCard(
+                title = "Daily Spends",
+                subtitle = "Day-by-day breakdown",
+                icon = Icons.Filled.Timeline
+            ) { DailySpendingChart(expenses) }
         }
-        item { DailySpendingChart(expenses) }
-
         item {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Categorized Spends",
-                style = MaterialTheme.typography.titleMedium
-            )
+            ChartCard(
+                title = "Categorized Spends",
+                subtitle = "Where your money goes",
+                icon = Icons.Filled.Category
+            ) { CategorizedSpendingChart(expenses) }
         }
-        item { CategorizedSpendingChart(expenses) }
     }
 }

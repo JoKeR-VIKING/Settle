@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Brightness6
@@ -156,8 +158,10 @@ fun AccountScreen(
                 }
         ) {
             Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 ProfileHeader(user = user)
 
@@ -200,22 +204,25 @@ fun AccountScreen(
                 ActionRow(
                     icon = Icons.Filled.School,
                     title = "Replay Tour",
-                    subtitle = "See the intro tips again",
+                    subtitle = "Re-show the quick intro tutorials",
                     onClick = {
-                        prefs.markSeen(SettlePrefs.TUTORIAL_EXPENSES)
-                        // Reset flags so CoachMarks appear again
-                        // (we flip them the opposite way – re-enable first-run)
+                        // Reset first-run flags so coachmarks appear again
                         context
                             .getSharedPreferences("settle_prefs", android.content.Context.MODE_PRIVATE)
                             .edit()
                             .putBoolean("first_run_${SettlePrefs.TUTORIAL_EXPENSES}", true)
                             .putBoolean("first_run_${SettlePrefs.TUTORIAL_GROUPS}", true)
+                            .putBoolean("first_run_${SettlePrefs.TUTORIAL_ANALYTICS}", true)
                             .apply()
-                        Toast.makeText(context, "Tour will show on next screen visit", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "Tour reset! Visit Expenses, Groups or Analytics to see it again.",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(Modifier.height(8.dp))
 
                 SignOutButton(
                     enabled = !isLoading && !isEditingUser,
@@ -229,6 +236,8 @@ fun AccountScreen(
                         }
                     }
                 )
+
+                Spacer(Modifier.height(24.dp))
             }
         }
     }

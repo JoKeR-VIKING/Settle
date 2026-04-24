@@ -184,10 +184,23 @@ fun ExpensesScreen(
 
         CoachMarkOverlay(
             visible = showCoach && !isFirstLoad,
+            title = "Welcome to Settle!",
             steps = listOf(
-                CoachStep("Welcome to Settle", "Track every expense and split bills with friends in seconds."),
-                CoachStep("Add your first expense", "Tap the + button, or pick one up automatically from a bank SMS."),
-                CoachStep("Long-press anything", "Long-press an expense to quickly delete or edit it."),
+                CoachStep(
+                    icon = androidx.compose.material.icons.Icons.Filled.Add,
+                    title = "Tap the + button",
+                    body = "See the round teal button at the bottom-right? Tap it to log a new expense. You'll also see an option to import from a bank SMS."
+                ),
+                CoachStep(
+                    icon = androidx.compose.material.icons.Icons.Filled.TouchApp,
+                    title = "Long-press to delete",
+                    body = "Press and hold on any expense row to quickly delete it. A confirmation dialog will appear."
+                ),
+                CoachStep(
+                    icon = androidx.compose.material.icons.Icons.Filled.Repeat,
+                    title = "Recurring expenses",
+                    body = "Switch to the \"Recurring\" tab at the top to set up subscriptions, rent, or anything you pay on a schedule."
+                ),
             ),
             onDismiss = {
                 showCoach = false
