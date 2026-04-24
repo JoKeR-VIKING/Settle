@@ -1,11 +1,18 @@
 package com.settle.tracker
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -40,7 +47,7 @@ import com.settle.tracker.screens.GroupsScreen
 import com.settle.tracker.screens.LoginScreen
 import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.ui.theme.SettleTheme
-import com.settle.tracker.utils.Permissions
+import com.settle.tracker.ui.theme.ThemePreferenceStore
 import com.settle.tracker.utils.createSmsNotificationChannel
 import com.settle.tracker.utils.saveTokenToFirestore
 import kotlinx.coroutines.launch
@@ -77,8 +84,6 @@ sealed class Screen(val route: String) {
 }
 
 class MainActivity : ComponentActivity() {
-    private lateinit var permissions: Permissions
-
     private var destination by mutableStateOf<String?>(null)
     private var mode by mutableStateOf<String?>(null)
     private var smsExpenseId by mutableStateOf<String?>(null)
@@ -101,9 +106,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         createSmsNotificationChannel(this)
-
-        permissions = Permissions(this)
-        lifecycle.addObserver(permissions)
 
         updateIntent(intent)
 
@@ -128,6 +130,14 @@ private fun AppContent(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val scope = rememberCoroutineScope()
+    val themePreferenceStore = remember { ThemePreferenceStore(activity) }
+    var darkThemeEnabled by remember {
+        mutableStateOf(
+            themePreferenceStore.getDarkMode()
+                ?: ((activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
+                    == Configuration.UI_MODE_NIGHT_YES)
+        )
+    }
 
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = currentRoute in BottomBarScreen.routes
@@ -246,7 +256,7 @@ private fun AppContent(
         }
     }
 
-    SettleTheme {
+    SettleTheme(darkTheme = darkThemeEnabled) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
@@ -259,6 +269,42 @@ private fun AppContent(
                 NavHost(
                     navController = navController,
                     startDestination = startDestination,
+                    enterTransition = {
+                        fadeIn(animationSpec = tween(260)) + scaleIn(
+                            initialScale = 0.98f,
+                            animationSpec = tween(260)
+                        ) + slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            animationSpec = tween(260)
+                        )
+                    },
+                    exitTransition = {
+                        fadeOut(animationSpec = tween(220)) + scaleOut(
+                            targetScale = 1.01f,
+                            animationSpec = tween(220)
+                        ) + slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            animationSpec = tween(220)
+                        )
+                    },
+                    popEnterTransition = {
+                        fadeIn(animationSpec = tween(240)) + scaleIn(
+                            initialScale = 0.98f,
+                            animationSpec = tween(240)
+                        ) + slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(240)
+                        )
+                    },
+                    popExitTransition = {
+                        fadeOut(animationSpec = tween(220)) + scaleOut(
+                            targetScale = 1.01f,
+                            animationSpec = tween(220)
+                        ) + slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(220)
+                        )
+                    }
                 ) {
                     composable(Screen.Login.route) {
                         LoginScreen(
@@ -304,7 +350,12 @@ private fun AppContent(
                     }
                     composable(Screen.Account.route) {
                         AccountScreen(
-                            googleAuthClient,
+                            googleAuthClient = googleAuthClient,
+                            darkThemeEnabled = darkThemeEnabled,
+                            onThemeToggle = { enabled ->
+                                darkThemeEnabled = enabled
+                                themePreferenceStore.setDarkMode(enabled)
+                            },
                             onLogoutSuccess = {
                                 currentUser = null
                                 navController.navigate(Screen.Login.route) {

@@ -1,17 +1,30 @@
 package com.settle.tracker.screens
 
 import android.util.Log
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,7 +39,10 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.FabMenu
+import com.settle.tracker.components.common.ExpenseListSkeleton
+import com.settle.tracker.components.common.EmptyState
 import com.settle.tracker.components.common.FabOverlay
+import com.settle.tracker.components.common.ScreenHeader
 import com.settle.tracker.components.expenses.ExpenseTable
 import com.settle.tracker.components.expenses.RecurringExpensesList
 import com.settle.tracker.scheme.ExpenseScheme
@@ -55,6 +71,7 @@ fun ExpensesScreen(
     val db = Firebase.firestore
 
     var expenses by remember { mutableStateOf<List<ExpenseScheme>>(emptyList()) }
+    var isFetchingExpenses by remember { mutableStateOf(true) }
     var expanded by remember { mutableStateOf(false) }
 
     var selectedTab by remember { mutableStateOf(DashboardType.EXPENSES) }
@@ -81,6 +98,7 @@ fun ExpensesScreen(
             .addSnapshotListener { snapShot, error ->
                 if (error != null) {
                     Log.e("Firestore", "${error.message}")
+                    isFetchingExpenses = false
                     return@addSnapshotListener
                 }
 
@@ -97,12 +115,13 @@ fun ExpensesScreen(
                         )
                     }
                 }
+                isFetchingExpenses = false
             }
     }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             FabMenu(
@@ -126,48 +145,83 @@ fun ExpensesScreen(
                     focusManager.clearFocus()
                 },
         ) {
+            ScreenHeader(
+                title = "Personal expenses",
+                subtitle = "Track everyday spending, recurring payments, and quick adds from one place."
+            )
+
             SecondaryTabRow(
                 selectedTabIndex = selectedTab.ordinal,
+                containerColor = MaterialTheme.colorScheme.background,
+                indicator = {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(selectedTab.ordinal),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                divider = {}
             ) {
-                Tab(
-                    selected = selectedTab == DashboardType.EXPENSES,
-                    onClick = {  selectedTab = DashboardType.EXPENSES },
-                    text = {
-                        Text(
-                            text = DashboardType.EXPENSES.getDisplayName(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                )
-
-                Tab(
-                    selected = selectedTab == DashboardType.RECURRING_EXPENSES,
-                    onClick = { selectedTab = DashboardType.RECURRING_EXPENSES },
-                    text = {
-                        Text(
-                            text = DashboardType.RECURRING_EXPENSES.getDisplayName(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                )
+                DashboardType.entries.forEach { type ->
+                    Tab(
+                        selected = selectedTab == type,
+                        onClick = { selectedTab = type },
+                        text = {
+                            Text(
+                                text = type.getDisplayName(),
+                                style = if (selectedTab == type)
+                                    MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                else
+                                    MaterialTheme.typography.titleSmall,
+                                color = if (selectedTab == type)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                }
             }
 
-            if (selectedTab == DashboardType.EXPENSES) {
-                ExpenseTable(
-                    expenses = expenses,
-                    onEditExpense = onEditExpense,
-                    onDeleteExpense = onDeleteExpense,
-                    modifier = Modifier
-                )
-            } else {
-                RecurringExpensesList(
-                    ownerCollection = "users",
-                    ownerId = currentUser.uid,
-                )
+            AnimatedContent(
+                targetState = selectedTab,
+                modifier = Modifier.weight(1f),
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(180))
+                        .togetherWith(fadeOut(animationSpec = tween(140)))
+                },
+                label = "expenses-tab-content"
+            ) { activeTab ->
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (activeTab == DashboardType.EXPENSES) {
+                        when {
+                            isFetchingExpenses && expenses.isEmpty() -> {
+                                ExpenseListSkeleton(modifier = Modifier.fillMaxSize())
+                            }
+
+                            expenses.isEmpty() -> {
+                                EmptyState(
+                                    assetName = "empty_expenses.json",
+                                    title = "No expenses yet",
+                                    description = "Add your first expense to start building a cleaner picture of your spending."
+                                )
+                            }
+
+                            else -> {
+                                ExpenseTable(
+                                    expenses = expenses,
+                                    onEditExpense = onEditExpense,
+                                    onDeleteExpense = onDeleteExpense,
+                                    modifier = Modifier
+                                )
+                            }
+                        }
+                    } else {
+                        RecurringExpensesList(
+                            ownerCollection = "users",
+                            ownerId = currentUser.uid,
+                        )
+                    }
+                }
             }
         }
 

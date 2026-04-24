@@ -7,12 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,10 +27,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.settle.tracker.AppDatabase
@@ -66,11 +71,11 @@ fun ExpenseRow(
 
     fun getExpenseSubText(): String {
         return if (expense.paidBy.isEmpty()) {
-            "paid via ${expense.paidFrom}"
+            "via ${expense.paidFrom}"
         } else if (expense.paidBy.size == 1) {
-            "${expense.paidBy.first().name} paid ${formatCurrency(expense.amount)}"
+            "${expense.paidBy.first().name} paid"
         } else {
-            "multiple people paid ${formatCurrency(expense.amount)}"
+            "Multiple people paid"
         }
     }
 
@@ -87,9 +92,10 @@ fun ExpenseRow(
         balanceAmount = myPaid - mySplit
     }
 
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .combinedClickable(
                 onClick = {
                     if (expense.category == ExpenseCategory.SETTLEMENT.name) return@combinedClickable
@@ -103,99 +109,104 @@ fun ExpenseRow(
                 onLongClick = {
                     showDeleteDialog = true
                 }
-            )
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            ),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 15.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                formatTimestamp(timestamp = expense.timestamp),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 0.3.sp,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        getExpenseCategoryColor(expense.category).copy(alpha = 0.15f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                getExpenseCategoryColor(expense.category),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(25.dp),
-                            imageVector = getExpenseCategoryIcon(expense.category),
-                            contentDescription = "Expense Icon",
-                            tint = MaterialTheme.colorScheme.onSecondary
-                        )
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    imageVector = getExpenseCategoryIcon(expense.category),
+                    contentDescription = "Category Icon",
+                    tint = getExpenseCategoryColor(expense.category)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = expense.details,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = getExpenseSubText(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = " • ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = formatTimestamp(timestamp = expense.timestamp, format = "MMM dd"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
+            ) {
+                val amountText = when {
+                    expense.paidBy.isNotEmpty() -> {
+                        if (balanceAmount.absoluteValue == 0.0 && !isInvolved)
+                            "Not involved"
+                        else
+                            formatCurrency(balanceAmount.absoluteValue)
                     }
+                    else -> formatCurrency(expense.amount)
+                }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            expense.details,
-                            style = MaterialTheme.typography.labelLarge,
-                            letterSpacing = 0.5.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                modifier = Modifier.weight(1f),
-                                text = getExpenseSubText(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                letterSpacing = 0.3.sp,
-                                maxLines = 1
-                            )
-
-                            Text(
-                                text = when {
-                                    expense.paidBy.isNotEmpty() -> {
-                                        if (balanceAmount.absoluteValue == 0.0 && !isInvolved)
-                                            "not involved"
-                                        else
-                                            formatCurrency(balanceAmount.absoluteValue)
-                                    }
-
-                                    else -> formatCurrency(expense.amount)
-                                },
-                                style = when {
-                                    expense.paidBy.isNotEmpty() && balanceAmount.absoluteValue == 0.0 -> MaterialTheme.typography.labelSmall
-                                    else -> MaterialTheme.typography.labelLarge
-                                },
-                                letterSpacing = 0.3.sp,
-                                color = when {
-                                    expense.paidBy.isNotEmpty() -> {
-                                        if (balanceAmount > 0.0) MaterialTheme.colorScheme.surfaceBright
-                                        else if (balanceAmount < 0.0) MaterialTheme.colorScheme.error
-                                        else MaterialTheme.colorScheme.onSurface
-                                    }
-
-                                    else -> MaterialTheme.colorScheme.onSurface
-                                },
-                            )
+                Text(
+                    text = amountText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = when {
+                        expense.paidBy.isNotEmpty() -> {
+                            if (balanceAmount > 0.0) MaterialTheme.colorScheme.surfaceBright
+                            else if (balanceAmount < 0.0) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurface
                         }
+                        else -> MaterialTheme.colorScheme.onSurface
                     }
+                )
+
+                if (expense.paidBy.isNotEmpty() && (balanceAmount != 0.0 || isInvolved)) {
+                    Text(
+                        text = if (balanceAmount > 0) "you get back" else if (balanceAmount < 0) "you owe" else "settled",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
                 }
             }
         }

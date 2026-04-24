@@ -2,22 +2,28 @@ package com.settle.tracker.screens
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,21 +39,25 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.GoogleAuthClient
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.account.ProfileHeader
 import com.settle.tracker.components.account.UpiIdField
+import com.settle.tracker.components.common.ProfileSkeleton
+import com.settle.tracker.components.common.ScreenHeader
 import com.settle.tracker.scheme.UserScheme
 import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
     googleAuthClient: GoogleAuthClient,
+    darkThemeEnabled: Boolean,
+    onThemeToggle: (Boolean) -> Unit,
     onLogoutSuccess: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -111,18 +121,16 @@ fun AccountScreen(
     }
 
     LoadingScreenWrapper(
-        isFetchingUser || isLoading,
+        isLoading = isLoading,
         message = when {
-            isFetchingUser -> "Fetching User Details..."
             isLoading -> "Signing out..."
             else -> "Loading..."
         }
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 20.dp, horizontal = 16.dp)
-                .padding(top = 30.dp)
+                .background(MaterialTheme.colorScheme.background)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -135,28 +143,77 @@ fun AccountScreen(
                             selection = TextRange(upiIdSynced.length)
                         )
                     }
-                },
-            contentAlignment = Alignment.CenterStart
+                }
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.spacedBy(40.dp),
-            ) {
-                ProfileHeader(user = user)
+            ScreenHeader(
+                title = "Profile",
+                subtitle = "Manage payment details, appearance, and the account tied to Settle."
+            )
 
-                UpiIdField(
-                    upiId = upiId,
-                    upiIdSynced = upiIdSynced,
-                    isEditing = isEditingUser,
-                    onUpiIdChange = { upiId = it },
-                    onSave = { updateUser() },
-                    focusRequester = upiIdFocus
-                )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                if (isFetchingUser) {
+                    ProfileSkeleton()
+                } else {
+                    ProfileHeader(user = user)
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 2.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Dark mode",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Switch between brighter daytime and quieter nighttime styling.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Switch(
+                                checked = darkThemeEnabled,
+                                onCheckedChange = onThemeToggle
+                            )
+                        }
+                    }
+
+                    UpiIdField(
+                        upiId = upiId,
+                        upiIdSynced = upiIdSynced,
+                        isEditing = isEditingUser,
+                        onUpiIdChange = { upiId = it },
+                        onSave = { updateUser() },
+                        focusRequester = upiIdFocus
+                    )
+                }
 
                 Spacer(modifier = Modifier.weight(1f))
 
                 TextButton(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
                     onClick = {
                         isLoading = true
 
@@ -174,10 +231,11 @@ fun AccountScreen(
                         }
                     },
                     enabled = !isLoading && !isEditingUser,
-                    contentPadding = PaddingValues(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.secondary,
-                    )
+                    contentPadding = PaddingValues(16.dp),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
@@ -189,8 +247,7 @@ fun AccountScreen(
 
                     Text(
                         "Sign Out",
-                        style = MaterialTheme.typography.labelLarge,
-                        letterSpacing = 1.sp,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     )
                 }
             }

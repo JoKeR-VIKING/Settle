@@ -47,6 +47,7 @@ import com.settle.tracker.utils.calculateNextOccurrence
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
 import com.settle.tracker.utils.getExpenseCategoryColor
+import com.settle.tracker.components.common.EmptyState
 import com.settle.tracker.utils.getExpenseCategoryIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,11 +144,18 @@ fun RecurringExpensesList(
         isLoading = isLoading,
         message = "Fetching recurring templates..."
     ) {
-        LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        if (!isLoading && recurringTemplates.isEmpty()) {
+            EmptyState(
+                assetName = "empty_recurring.json",
+                title = "No Recurring Expenses",
+                description = "Automate your regular payments like rent or subscriptions here."
+            )
+        } else {
+            LazyColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(25.dp)
         ) {
             recurringTemplates.forEach { template ->
@@ -376,6 +384,7 @@ fun RecurringExpensesList(
                     }
                 }
             }
+        }
         }
     }
 }

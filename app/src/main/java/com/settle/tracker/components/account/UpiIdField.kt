@@ -28,10 +28,10 @@ fun UpiIdField(
 ) {
     OutlinedTextField(
         modifier = modifier
-            .fillMaxWidth(0.95f)
+            .fillMaxWidth()
             .focusRequester(focusRequester),
-        textStyle = MaterialTheme.typography.labelLarge,
-        shape = RoundedCornerShape(15),
+        textStyle = MaterialTheme.typography.bodyMedium,
+        shape = RoundedCornerShape(18.dp),
         label = { Text("Your UPI ID", style = MaterialTheme.typography.labelMedium) },
         placeholder = { Text("example@ok_icici") },
         value = upiId,

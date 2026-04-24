@@ -27,6 +27,7 @@ import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.analytics.CategorizedSpendingChart
 import com.settle.tracker.components.analytics.MonthlySpendingChart
 import com.settle.tracker.components.analytics.TopSpenders
+import com.settle.tracker.components.common.EmptyState
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
 
@@ -73,62 +74,80 @@ fun GroupAnalytics() {
             }
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, top = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(35.dp)
-    ) {
-        item {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(groups, key = { it.id }) { group ->
-                    FilterChip(
-                        selected = selectedGroup?.id == group.id,
-                        onClick = { selectedGroup = group },
-                        label = { Text(group.groupName) }
-                    )
+    if (groups.isEmpty()) {
+        EmptyState(
+            assetName = "empty_groups.json",
+            title = "No Groups Found",
+            description = "You need to be part of at least one group to see group analytics."
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, top = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(35.dp)
+        ) {
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(groups, key = { it.id }) { group ->
+                        FilterChip(
+                            selected = selectedGroup?.id == group.id,
+                            onClick = { selectedGroup = group },
+                            label = { Text(group.groupName) }
+                        )
+                    }
                 }
             }
-        }
 
-        item {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Monthly Spends",
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+            if (expenses.isEmpty()) {
+                item {
+                    EmptyState(
+                        assetName = "empty_analytics.json",
+                        title = "No Expenses in this Group",
+                        description = "Add some group expenses to see the analytics for ${selectedGroup?.groupName}."
+                    )
+                }
+            } else {
+                item {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Monthly Spends",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
 
-        item {
-            MonthlySpendingChart(expenses)
-        }
+                item {
+                    MonthlySpendingChart(expenses)
+                }
 
-        item {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Top Spenders",
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+                item {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Top Spenders",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
 
-        item {
-            TopSpenders(expenses)
-        }
+                item {
+                    TopSpenders(expenses)
+                }
 
-        item {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Categorized Spends",
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+                item {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Categorized Spends",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
 
-        item {
-            CategorizedSpendingChart(expenses)
+                item {
+                    CategorizedSpendingChart(expenses)
+                }
+            }
         }
     }
 }

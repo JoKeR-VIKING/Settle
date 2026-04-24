@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -66,9 +67,9 @@ fun DateField(
                     onFocus()
                 }
             },
-        textStyle = MaterialTheme.typography.labelLarge,
-        shape = RoundedCornerShape(15),
-        label = { Text("Date", style = MaterialTheme.typography.labelLarge) },
+        textStyle = MaterialTheme.typography.bodyLarge,
+        shape = RoundedCornerShape(16.dp),
+        label = { Text("Date", style = MaterialTheme.typography.labelMedium) },
         value = dateText,
         onValueChange = {},
         readOnly = true,
@@ -80,7 +81,8 @@ fun DateField(
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.CalendarMonth,
-                contentDescription = "Date"
+                contentDescription = "Date",
+                tint = MaterialTheme.colorScheme.primary
             )
         },
     )
@@ -100,9 +102,9 @@ fun AmountField(
             .onFocusChanged { focusState ->
                 onFocusChanged(focusState.isFocused)
             },
-        textStyle = MaterialTheme.typography.labelLarge,
-        shape = RoundedCornerShape(15),
-        label = { Text("Amount", style = MaterialTheme.typography.labelLarge) },
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+        shape = RoundedCornerShape(16.dp),
+        label = { Text("Amount", style = MaterialTheme.typography.labelMedium) },
         value = displayAmount ?: amount,
         onValueChange = { newAmount ->
             val isValid = newAmount.matches(Regex("^\\d*(\\.\\d{0,2})?$"))
@@ -116,9 +118,11 @@ fun AmountField(
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.Money,
-                contentDescription = "Amount"
+                contentDescription = "Amount",
+                tint = MaterialTheme.colorScheme.primary
             )
         },
+        prefix = { Text("₹ ", fontWeight = FontWeight.Bold) }
     )
 }
 
@@ -130,12 +134,12 @@ fun DescriptionField(
 ) {
     OutlinedTextField(
         modifier = modifier.fillMaxWidth(0.95f),
-        textStyle = MaterialTheme.typography.labelLarge,
-        shape = RoundedCornerShape(15),
+        textStyle = MaterialTheme.typography.bodyLarge,
+        shape = RoundedCornerShape(16.dp),
         label = {
             Text(
                 "Description",
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.labelMedium
             )
         },
         value = description,
@@ -151,7 +155,8 @@ fun DescriptionField(
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.Description,
-                contentDescription = "Description"
+                contentDescription = "Description",
+                tint = MaterialTheme.colorScheme.primary
             )
         },
         supportingText = {
@@ -183,9 +188,9 @@ fun CategoryField(
                     onFocus()
                 }
             },
-        textStyle = MaterialTheme.typography.labelLarge,
-        shape = RoundedCornerShape(15),
-        label = { Text("Category", style = MaterialTheme.typography.labelLarge) },
+        textStyle = MaterialTheme.typography.bodyLarge,
+        shape = RoundedCornerShape(16.dp),
+        label = { Text("Category", style = MaterialTheme.typography.labelMedium) },
         value = category.getDisplayName(),
         onValueChange = {},
         readOnly = true,
@@ -197,7 +202,8 @@ fun CategoryField(
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.Category,
-                contentDescription = "Category"
+                contentDescription = "Category",
+                tint = MaterialTheme.colorScheme.primary
             )
         },
         trailingIcon = {
@@ -225,19 +231,19 @@ fun PaymentMethodField(
                     onFocus()
                 }
             },
-        textStyle = MaterialTheme.typography.labelLarge,
-        shape = RoundedCornerShape(15),
+        textStyle = MaterialTheme.typography.bodyLarge,
+        shape = RoundedCornerShape(16.dp),
         label = {
             Text(
                 text = if (isGroupExpense) "Paid By" else "Payment Method",
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.labelMedium
             )
         },
         value = (
             if (isGroupExpense) {
                 if (paidBy.isEmpty()) ""
                 else if (paidBy.size == 1) paidBy.first().name
-                else "Multiple"
+                else "${paidBy.size} people"
             } else {
                 paidFrom
             }
@@ -252,7 +258,8 @@ fun PaymentMethodField(
         leadingIcon = {
             Icon(
                 imageVector = if (isGroupExpense) Icons.Filled.Person4 else Icons.Filled.Paid,
-                contentDescription = if (isGroupExpense) "Paid By" else "Paid From"
+                contentDescription = if (isGroupExpense) "Paid By" else "Paid From",
+                tint = MaterialTheme.colorScheme.primary
             )
         },
         trailingIcon = {

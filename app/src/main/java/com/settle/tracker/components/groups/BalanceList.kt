@@ -38,6 +38,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.common.EmptyState
 import com.settle.tracker.components.expenses.BalanceCard
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
@@ -220,11 +221,18 @@ fun BalanceList(
         isLoading = isLoading,
         message = "Fetching balances..."
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(25.dp)
-        ) {
+        if (!isLoading && settlements.isEmpty()) {
+            EmptyState(
+                assetName = "empty_balances.json",
+                title = "All Settled Up!",
+                description = "No outstanding balances in this group. You're good to go!"
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(25.dp)
+            ) {
             item {
                 Text(
                     modifier = Modifier.fillMaxWidth(0.9f),
@@ -367,6 +375,7 @@ fun BalanceList(
                 confirmText = "Settle",
                 confirmColor = MaterialTheme.colorScheme.primary
             )
+        }
         }
     }
 }

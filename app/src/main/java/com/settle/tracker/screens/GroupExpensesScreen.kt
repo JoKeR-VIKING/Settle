@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -28,6 +30,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -178,7 +182,7 @@ fun GroupExpensesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -197,7 +201,10 @@ fun GroupExpensesScreen(
 
                     Text(
                         groupData.groupName,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
 
                     IconButton(
@@ -214,6 +221,8 @@ fun GroupExpensesScreen(
                     selectedTab = selectedTab,
                     onTabSelected = { selectedTab = it }
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 if (selectedTab == GroupTab.EXPENSES) {
                     Scaffold(

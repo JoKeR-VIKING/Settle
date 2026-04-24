@@ -1,6 +1,9 @@
 package com.settle.tracker.components
 
 import android.annotation.SuppressLint
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -21,12 +24,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -43,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.settle.tracker.AppDatabase
 import com.settle.tracker.components.expenses.SmsExpenseModal
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.utils.Permissions
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,11 +60,13 @@ fun FabMenu(
     onEditExpense: (String, String?) -> Unit
 ) {
     var showSmsModal by remember { mutableStateOf(false) }
+    var showSmsPermissionDialog by remember { mutableStateOf(false) }
 
     val smsModalSheetstate = rememberModalBottomSheetState(
         skipPartiallyExpanded = false
     )
     val context = LocalContext.current
+    val smsPermissions = remember { Permissions.smsPermissions() }
     val expenseDao = AppDatabase
         .getInstance(context)
         .expenseDraftDao()
@@ -82,6 +90,19 @@ fun FabMenu(
         animationSpec = tween(durationMillis = 250),
         label = "Fab Rotation"
     )
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        if (Permissions.hasPermissions(context, smsPermissions)) {
+            showSmsModal = true
+        } else {
+            Toast.makeText(
+                context,
+                "SMS access is optional. You can enable it later when you want quick imports.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -129,7 +150,11 @@ fun FabMenu(
                     "Add From SMS",
                     Icons.Filled.Sms,
                     onClick = {
-                        showSmsModal = true
+                        if (Permissions.hasPermissions(context, smsPermissions)) {
+                            showSmsModal = true
+                        } else {
+                            showSmsPermissionDialog = true
+                        }
                         onToggleExpanded()
                     }
                 )
@@ -153,6 +178,35 @@ fun FabMenu(
                 expenses = expenses,
                 expenseIds = expenseIds,
                 onEditExpense = onEditExpense
+            )
+        }
+
+        if (showSmsPermissionDialog) {
+            AlertDialog(
+                onDismissRequest = { showSmsPermissionDialog = false },
+                title = { Text("Turn on SMS import") },
+                text = {
+                    Text(
+                        "Settle only asks for SMS and notification access when you use SMS import, so the app can detect transactions and queue drafts for review."
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showSmsPermissionDialog = false
+                            permissionLauncher.launch(
+                                Permissions.missingPermissions(context, smsPermissions).toTypedArray()
+                            )
+                        }
+                    ) {
+                        Text("Continue")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSmsPermissionDialog = false }) {
+                        Text("Not now")
+                    }
+                }
             )
         }
     }

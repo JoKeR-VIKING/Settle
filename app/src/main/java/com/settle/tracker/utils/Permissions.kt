@@ -1,61 +1,42 @@
 package com.settle.tracker.utils
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
 
-class Permissions(
-    private val activity: ComponentActivity
-) : DefaultLifecycleObserver {
-    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private val permissions = arrayOf(
-        Manifest.permission.RECEIVE_SMS,
-        Manifest.permission.READ_SMS,
-        Manifest.permission.POST_NOTIFICATIONS,
-        Manifest.permission.READ_CONTACTS
-    )
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    override fun onCreate(owner: LifecycleOwner) {
-        permissionLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { result ->
-            result.forEach { (permission, isGranted) ->
-                if (isGranted) onPermissionGranted(permission)
-            }
-        }
-
-        askPermissions()
-    }
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    fun askPermissions() {
-        val permissionsToRequest = permissions.filter {
-            ContextCompat
-                .checkSelfPermission(
-                    activity,
-                    it
-                ) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (permissionsToRequest.isNotEmpty()) {
-            permissionLauncher.launch(permissionsToRequest.toTypedArray())
+object Permissions {
+    fun smsPermissions(): Array<String> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.RECEIVE_SMS,
+                Manifest.permission.READ_SMS,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
         } else {
-            permissions.forEach { onPermissionGranted(it) }
+            arrayOf(
+                Manifest.permission.RECEIVE_SMS,
+                Manifest.permission.READ_SMS
+            )
         }
     }
-}
 
-private fun onPermissionGranted(permission: String) {
-    Log.d("Permission_Active", permission)
+    fun hasPermissions(context: Context, permissions: Array<String>): Boolean {
+        return permissions.all { permission ->
+            ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    fun missingPermissions(context: Context, permissions: Array<String>): List<String> {
+        return permissions.filter { permission ->
+            ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) != PackageManager.PERMISSION_GRANTED
+        }
+    }
 }
