@@ -23,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -41,13 +40,13 @@ fun Modifier.bounceClickable(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = tween(140, easing = FastOutSlowInEasing),
+        targetValue = if (pressed) 0.975f else 1f,
+        animationSpec = tween(120, easing = FastOutSlowInEasing),
         label = "bounce-scale"
     )
     val hapticFeedback = LocalHapticFeedback.current
     this
-        .scale(scale)
+        .graphicsLayer(scaleX = scale, scaleY = scale)
         .clickable(
             interactionSource = interaction,
             indication = null,

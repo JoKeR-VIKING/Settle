@@ -10,6 +10,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.settle.tracker.utils.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary             = BrandTeal,
@@ -35,7 +36,7 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant      = DarkSurfaceVar,
     onSurfaceVariant    = DarkOnSurfaceVar,
 
-    surfaceBright       = Success,        // kept for compatibility (positive amount)
+    surfaceBright       = Success,
     error               = Danger,
     onError             = Color.White,
     errorContainer      = Color(0xFF3B0F14),
@@ -79,10 +80,16 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun SettleTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // keep brand-consistent: don't adopt Material You tint
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.LIGHT  -> false
+        ThemeMode.DARK   -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

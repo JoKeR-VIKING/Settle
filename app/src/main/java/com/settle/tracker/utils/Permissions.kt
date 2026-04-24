@@ -102,10 +102,15 @@ fun rememberPermissionRequester(
 ): PermissionRequester {
     val context = LocalContext.current
     var showRationale by remember { mutableStateOf(false) }
+    var showDeniedSheet by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        if (!granted) {
+            // OS returned denied – show follow-up sheet with "Open Settings".
+            showDeniedSheet = true
+        }
         onResult(granted)
     }
 
@@ -164,6 +169,42 @@ fun rememberPermissionRequester(
                     showRationale = false
                     onResult(false)
                 }) { Text("Not now") }
+            }
+        )
+    }
+
+    if (showDeniedSheet) {
+        AlertDialog(
+            onDismissRequest = { showDeniedSheet = false },
+            shape = RoundedCornerShape(22.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            icon = {
+                Icon(
+                    imageVector = permission.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text("${permission.label} is disabled", style = MaterialTheme.typography.titleLarge)
+            },
+            text = {
+                Text(
+                    "${permission.why}\n\nWithout it, this feature can’t work. You can enable it " +
+                    "from the app settings.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeniedSheet = false
+                    context.openAppSettings()
+                }) { Text("Open Settings", style = MaterialTheme.typography.labelLarge) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeniedSheet = false }) { Text("Cancel") }
             }
         )
     }

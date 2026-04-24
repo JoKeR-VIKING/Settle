@@ -52,10 +52,13 @@ import com.settle.tracker.GoogleAuthClient
 import com.settle.tracker.R
 import com.settle.tracker.ui.animations.CoinLoader
 import com.settle.tracker.ui.animations.breathing
+import com.settle.tracker.ui.animations.bounceClickable
 import com.settle.tracker.ui.theme.BrandBlue
 import com.settle.tracker.ui.theme.BrandBlueDeep
 import com.settle.tracker.ui.theme.BrandTeal
 import com.settle.tracker.ui.theme.BrandTealDeep
+import com.settle.tracker.utils.SettleLinks
+import com.settle.tracker.utils.openUrl
 import com.settle.tracker.utils.rememberSoundManager
 import kotlinx.coroutines.launch
 
@@ -252,6 +255,20 @@ fun LoginScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .bounceClickable { context.openUrl(SettleLinks.PRIVACY_POLICY) }
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            "View Privacy Policy",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

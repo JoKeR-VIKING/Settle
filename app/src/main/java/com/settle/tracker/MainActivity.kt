@@ -49,6 +49,8 @@ import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.SettlePermission
 import com.settle.tracker.utils.SoundManager
 import com.settle.tracker.utils.LocalSoundManager
+import com.settle.tracker.utils.LocalThemeState
+import com.settle.tracker.utils.rememberThemeState
 import com.settle.tracker.utils.createSmsNotificationChannel
 import com.settle.tracker.utils.rememberPermissionRequester
 import com.settle.tracker.utils.saveTokenToFirestore
@@ -142,6 +144,7 @@ private fun AppContent(
 
     val googleAuthClient = remember { GoogleAuthClient(activity) }
     val soundManager = remember { SoundManager(activity.applicationContext) }
+    val themeState = rememberThemeState(activity)
     var currentUser by remember { mutableStateOf(googleAuthClient.getSignedInUser()) }
     val startDestination = remember {
         when {
@@ -230,8 +233,11 @@ private fun AppContent(
         }
     }
 
-    SettleTheme {
-        CompositionLocalProvider(LocalSoundManager provides soundManager) {
+    SettleTheme(themeMode = themeState.mode.value) {
+        CompositionLocalProvider(
+            LocalSoundManager provides soundManager,
+            LocalThemeState provides themeState
+        ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {

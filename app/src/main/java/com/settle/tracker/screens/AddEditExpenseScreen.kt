@@ -49,6 +49,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.AppDatabase
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.common.SuccessOverlay
 import com.settle.tracker.components.expenses.AmountField
 import com.settle.tracker.components.expenses.CategoryField
 import com.settle.tracker.components.expenses.CategoryPickerModal
@@ -131,6 +132,7 @@ fun AddEditExpenseScreen(
     var showPaidFromModal by remember { mutableStateOf(false) }
     var isSubmittingExpense by remember { mutableStateOf(false) }
     var isFetchingExpense by remember { mutableStateOf(false) }
+    var showSuccess by remember { mutableStateOf(false) }
     var previousPaymentMethods by remember { mutableStateOf<List<String>>(emptyList()) }
 
     fun Double.isAlmostEqualTo(other: Double?): Boolean {
@@ -185,6 +187,7 @@ fun AddEditExpenseScreen(
                 .document(id)
                 .set(expenseMap, SetOptions.merge())
                 .addOnSuccessListener {
+                    sound.success()
                     expenseId?.let { id ->
                         scope.launch {
                             expenseDao.delete(id)
@@ -196,6 +199,10 @@ fun AddEditExpenseScreen(
                         onBack()
                         return@addOnSuccessListener
                     }
+
+                    // For ADD / SMS_ADD: show celebratory overlay, then go back
+                    isSubmittingExpense = false
+                    showSuccess = true
 
                     if (isRecurring) {
                         val recurringTemplate = RecurringExpensesScheme(
@@ -231,17 +238,9 @@ fun AddEditExpenseScreen(
                             .collection("recurring_expenses")
                             .document(recurringTemplateId)
                             .set(recurringTemplate, SetOptions.merge())
-                            .addOnSuccessListener {
-                                isSubmittingExpense = false
-                                onBack()
-                            }
                             .addOnFailureListener { e ->
-                                isSubmittingExpense = false
                                 Log.e("Firestore", "${e.message}")
                             }
-                    } else {
-                        isSubmittingExpense = false
-                        onBack()
                     }
                 }
                 .addOnFailureListener { e ->
@@ -577,6 +576,16 @@ fun AddEditExpenseScreen(
                 }
             }
         }
+
+        // Celebratory success overlay – shown after a fresh expense was saved
+        SuccessOverlay(
+            visible = showSuccess,
+            message = "Expense added!",
+            onDismiss = {
+                showSuccess = false
+                onBack()
+            }
+        )
     }
 }
 
