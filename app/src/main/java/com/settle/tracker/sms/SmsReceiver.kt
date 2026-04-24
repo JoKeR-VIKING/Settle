@@ -1,13 +1,17 @@
 package com.settle.tracker.sms
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.provider.Telephony
+import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.settle.tracker.AppDatabase
 import com.settle.tracker.MainActivity
 import com.settle.tracker.R
@@ -32,6 +36,7 @@ fun ExpenseScheme.toEntity(): ExpenseEntity = ExpenseEntity(
 const val SMS_CHANNEL_ID = "sms_expense_channel"
 const val GROUP_ID = "EXPENSE_GROUP"
 
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
 fun sendNotification(
     context: Context,
     title: String,
@@ -114,13 +119,19 @@ class SmsReceiver : BroadcastReceiver() {
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
 
-                    sendNotification(
-                        context,
-                        title = "Spent ${formatCurrency(draft.amount)}",
-                        text = "Paid to ${draft.details} using ${draft.paidFrom}",
-                        category = draft.category,
-                        pendingIntent
-                    )
+                    if (ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        sendNotification(
+                            context,
+                            title = "Spent ${formatCurrency(draft.amount)}",
+                            text = "Paid to ${draft.details} using ${draft.paidFrom}",
+                            category = draft.category,
+                            pendingIntent
+                        )
+                    }
                 }
             }
         }

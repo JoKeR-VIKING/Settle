@@ -31,7 +31,7 @@ fun PieChart(
     showPercentage: Boolean = false,
     minPercentageToShow: Float = 10f,
     showValue: Boolean = false,
-    textStyle: TextStyle = MaterialTheme.typography.labelMedium.copy(
+    textStyle: TextStyle = MaterialTheme.typography.labelSmall.copy(
         color = MaterialTheme.colorScheme.onSurface
     )
 ) {
@@ -102,7 +102,7 @@ fun PieChart(
                         "${percentageFormatted}%\n${valueFormatted}"
                     showPercentage && percentage >= minPercentageToShow ->
                         "${percentageFormatted}%"
-                    showValue ->
+                    showValue && percentage >= minPercentageToShow ->
                         valueFormatted
                     else ->
                         ""

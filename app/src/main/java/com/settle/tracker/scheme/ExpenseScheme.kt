@@ -11,6 +11,8 @@ enum class ExpenseCategory {
     SUBSCRIPTION,
     HEALTH,
     TRAVEL,
+    INVESTMENT,
+    GIFT,
     MISC,
     SETTLEMENT;
 

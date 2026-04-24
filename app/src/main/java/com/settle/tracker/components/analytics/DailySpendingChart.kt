@@ -2,21 +2,26 @@ package com.settle.tracker.components.analytics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,17 +39,28 @@ import com.settle.tracker.components.chart.ReferenceLineConfig
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.utils.formatCurrency
 
+enum class DailyFilterList(
+    val daysCount: Int
+) {
+    WEEK(7),
+    MONTH(30);
+
+    fun getDisplayName() = "Last " + this.daysCount.toString() + " days"
+}
+
 @Composable
 fun DailySpendingChart(
     expenses: List<ExpenseScheme>
 ) {
     if (expenses.size <= 1) return
 
-    val dailyData = remember(expenses) { prepareDailyData(expenses) }
-    val listState = rememberLazyListState()
+    var selectedFilter by remember { mutableStateOf(DailyFilterList.WEEK) }
+    val dailyData =
+        remember(expenses, selectedFilter) { prepareDailyData(expenses, selectedFilter.daysCount) }
+
+    if (dailyData.isEmpty()) return
 
     val averageAmount = dailyData.filter { it.amount != 0.0 }.map { it.amount }.average()
-
     val recentAverage = dailyData
         .takeLast(7)
         .map { it.amount }
@@ -62,14 +78,23 @@ fun DailySpendingChart(
         getLowestSpendingWeekday(dailyData)
     }
 
-    LaunchedEffect(dailyData.size) {
-        listState.scrollToItem(0, scrollOffset = Int.MAX_VALUE)
-    }
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(DailyFilterList.entries, key = { it.name }) { filterValue ->
+                FilterChip(
+                    selected = selectedFilter == filterValue,
+                    onClick = { selectedFilter = filterValue },
+                    label = { Text(filterValue.getDisplayName()) }
+                )
+            }
+        }
+
         BarChart(
             modifier = Modifier.height(250.dp),
             xAxisData = dailyData.map { it.date },

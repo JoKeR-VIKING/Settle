@@ -7,6 +7,8 @@ import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.LocalPlay
 import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Redeem
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Subscriptions
@@ -86,6 +88,8 @@ fun getExpenseCategoryIcon(expenseCategory: String): ImageVector {
         ExpenseCategory.SUBSCRIPTION -> Icons.Filled.Subscriptions
         ExpenseCategory.HEALTH -> Icons.Filled.MonitorHeart
         ExpenseCategory.TRAVEL -> Icons.Filled.Luggage
+        ExpenseCategory.INVESTMENT -> Icons.Filled.Savings
+        ExpenseCategory.GIFT -> Icons.Filled.Redeem
         ExpenseCategory.MISC -> Icons.Filled.Category
         ExpenseCategory.SETTLEMENT -> ImageVector.vectorResource(
             id = R.drawable.money_bag
@@ -109,6 +113,8 @@ fun getExpenseCategoryLargeIcon(expenseCategory: String): Int {
         ExpenseCategory.SUBSCRIPTION -> R.drawable.ic_subscription
         ExpenseCategory.HEALTH -> R.drawable.ic_health
         ExpenseCategory.TRAVEL -> R.drawable.ic_travel
+        ExpenseCategory.INVESTMENT -> R.drawable.ic_investment
+        ExpenseCategory.GIFT -> R.drawable.ic_gift
         ExpenseCategory.MISC -> R.drawable.ic_misc
         ExpenseCategory.SETTLEMENT -> R.drawable.money_bag
     }
@@ -130,6 +136,8 @@ fun getExpenseCategoryColor(expenseCategory: String): Color {
         ExpenseCategory.SUBSCRIPTION -> Color(0xFFFF0000)
         ExpenseCategory.HEALTH -> Color(0xFF1565C0)
         ExpenseCategory.TRAVEL -> Color(0xFF7B3F00)
+        ExpenseCategory.INVESTMENT -> Color(0xFF1B5E20)
+        ExpenseCategory.GIFT -> Color(0xFFC2185B)
         ExpenseCategory.MISC -> Color(0xFF546E7A)
         ExpenseCategory.SETTLEMENT -> Color(0xFFFFB300)
     }
@@ -240,7 +248,7 @@ fun calculateNextOccurrence(
 }
 
 fun toFullMonthName(month: String): String {
-    val formatter = DateTimeFormatter.ofPattern("MMM", Locale.getDefault())
+    val formatter = DateTimeFormatter.ofPattern("MMM yy", Locale.getDefault())
 
     return Month
         .from(formatter.parse(month))

@@ -66,6 +66,7 @@ fun LineChart(
     showHorizontalGrid: Boolean = true,
     showVerticalGrid: Boolean = true,
     showTooltip: Boolean = true,
+    startFromEnd: Boolean = true,
     lineType: LineType = LineType.STRAIGHT,
     referenceLine: ReferenceLineConfig? = null
 ) {
@@ -88,11 +89,13 @@ fun LineChart(
         floatArrayOf(16f, 10f),
         phase = 0f
     )
-    val pointSpacing = 150f
+    val pointSpacing = 200f
 
     var selectedIndex by remember { mutableIntStateOf(-1) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(points.size) {
+        if (startFromEnd) scrollState.scrollTo(scrollState.maxValue)
+
         progress.snapTo(0f)
         progress.animateTo(
             targetValue = 1f,
@@ -106,7 +109,7 @@ fun LineChart(
     BoxWithConstraints(
         modifier = Modifier.fillMaxWidth(0.95f)
     ) {
-        val contentWidthPx = pointSpacing * (points.size - 1)
+        val contentWidthPx = pointSpacing * points.size
         val availableWidthPx = with(density) { maxWidth.toPx() }
         val finalWidthPx = max(contentWidthPx, availableWidthPx)
 
@@ -291,17 +294,18 @@ fun LineChart(
                     val label = xAxisData?.get(i) ?: i.toString()
                     val text = textMeasurer.measure(label, labelStyle)
 
-                    val maxLabelX = paddingLeft + chartWidth - text.size.width
+                    val maxLabelX = paddingLeft + chartWidth
                     val labelX = (x - text.size.width / 2).coerceIn(
                         paddingLeft,
                         maxLabelX
                     )
+                    val labelY = chartHeight + paddingBottom
 
                     drawText(
                         textLayoutResult = text,
                         topLeft = Offset(
                             x = labelX,
-                            y = chartHeight + paddingBottom
+                            y =  labelY
                         )
                     )
                 }

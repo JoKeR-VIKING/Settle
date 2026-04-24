@@ -3,7 +3,6 @@ package com.settle.tracker.components.analytics.personal
 import android.icu.util.Calendar
 import com.settle.tracker.components.chart.PieData
 import com.settle.tracker.scheme.ExpenseScheme
-import com.settle.tracker.utils.formatTimestamp
 import com.settle.tracker.utils.getExpenseCategoryColor
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -13,7 +12,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 data class MonthlyPoints(
-    val yearMonthKey: Int,
+    val yearMonthKey: Long,
     val monthName: String,
     val amount: Double
 )
@@ -37,28 +36,57 @@ fun Long.toYearMonth(): YearMonth =
         .toLocalDate()
         .let { YearMonth.of(it.year, it.month) }
 
-fun prepareMonthlyData(expenses: List<ExpenseScheme>): List<MonthlyPoints> {
-    val calendar = Calendar.getInstance()
+fun prepareMonthlyData(
+    expenses: List<ExpenseScheme>,
+    monthCount: Int
+): List<MonthlyPoints> {
 
-    return expenses
-        .groupBy {
-            calendar.timeInMillis = it.timestamp
-            calendar.get(Calendar.YEAR) * 100 + calendar.get(Calendar.MONTH)
-        }
-        .map { (yearMonthKey, monthlyList) ->
-            calendar.timeInMillis = monthlyList.first().timestamp
-            MonthlyPoints(
-                yearMonthKey = yearMonthKey,
-                monthName = formatTimestamp(calendar.timeInMillis, "MMM"),
-                amount = monthlyList.sumOf { it.amount }
-            )
-        }
-        .sortedByDescending { it.yearMonthKey }
-        .takeLast(6)
-        .reversed()
+    val monthFormat = SimpleDateFormat("MMM yy", Locale.ENGLISH)
+    val calendar = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    val monthlyExpenseMap = expenses.groupBy {
+        calendar.timeInMillis = it.timestamp
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        calendar.timeInMillis
+    }.mapValues { entry ->
+        entry.value.sumOf { it.amount }
+    }
+
+    val currentMonth = Calendar.getInstance()
+
+    return (0 until monthCount).map { offset ->
+        val monthCal = currentMonth.clone() as Calendar
+        monthCal.add(Calendar.MONTH, -offset)
+        monthCal.set(Calendar.DAY_OF_MONTH, 1)
+        monthCal.set(Calendar.HOUR_OF_DAY, 0)
+        monthCal.set(Calendar.MINUTE, 0)
+        monthCal.set(Calendar.SECOND, 0)
+        monthCal.set(Calendar.MILLISECOND, 0)
+
+        val monthTimestamp = monthCal.timeInMillis
+
+        MonthlyPoints(
+            yearMonthKey = monthTimestamp,
+            monthName = monthFormat.format(monthTimestamp),
+            amount = monthlyExpenseMap[monthTimestamp] ?: 0.0
+        )
+    }.reversed()
 }
 
-fun prepareDailyData(expenses: List<ExpenseScheme>): List<DailyPoints> {
+fun prepareDailyData(
+    expenses: List<ExpenseScheme>,
+    daysCount: Int
+): List<DailyPoints> {
     val dayFormat = SimpleDateFormat("dd MMM", Locale.ENGLISH)
     val calendar = Calendar.getInstance()
 
@@ -75,7 +103,7 @@ fun prepareDailyData(expenses: List<ExpenseScheme>): List<DailyPoints> {
 
     val today = Calendar.getInstance()
 
-    return (0 until 31).map { offset ->
+    return (0 until (daysCount + 1)).map { offset ->
         val dayCal = today.clone() as Calendar
         dayCal.add(Calendar.DAY_OF_YEAR, -offset)
 
@@ -95,9 +123,11 @@ fun prepareDailyData(expenses: List<ExpenseScheme>): List<DailyPoints> {
 }
 
 fun prepareCategorizedData(
-    expenses: List<ExpenseScheme>
+    expenses: List<ExpenseScheme>,
+    monthCount: Int
 ): List<PieData> {
     val currentMonth = YearMonth.now()
+    val startMonth = currentMonth.minusMonths((monthCount - 1).toLong())
 
     return expenses
         .filter {
@@ -106,7 +136,7 @@ fun prepareCategorizedData(
                 .toLocalDate()
                 .let { date -> YearMonth.of(date.year, date.month) }
 
-            expenseMonth == currentMonth
+            expenseMonth in startMonth..currentMonth
         }
         .groupBy { it.category }
         .map { (category, list) ->

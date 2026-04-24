@@ -87,8 +87,8 @@ fun BarChart(
 
     var selectedIndex by remember { mutableStateOf(Pair(-1, -1)) }
 
-    LaunchedEffect(Unit) {
-        if (startFromEnd) scrollState.scrollTo(scrollState.maxValue)
+    LaunchedEffect(bars.size) {
+        if (startFromEnd) scrollState.animateScrollTo(scrollState.maxValue)
 
         progress.snapTo(0f)
         progress.animateTo(

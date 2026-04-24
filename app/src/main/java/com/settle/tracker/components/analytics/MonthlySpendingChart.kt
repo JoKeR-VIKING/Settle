@@ -2,19 +2,26 @@ package com.settle.tracker.components.analytics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
@@ -31,13 +38,29 @@ import com.settle.tracker.utils.toFullMonthName
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
+enum class MonthlyFilterList(
+    val monthCount: Int
+) {
+    THREE(3),
+    SIX(6),
+    YEAR(12);
+
+    fun getDisplayName() = "Last " + this.monthCount.toString() + " months"
+}
+
 @Composable
 fun MonthlySpendingChart(
     expenses: List<ExpenseScheme>
 ) {
     if (expenses.size <= 1) return
 
-    val monthlyChart = remember(expenses) { prepareMonthlyData(expenses) }
+    var selectedFilter by remember { mutableStateOf(MonthlyFilterList.SIX) }
+    val monthlyChart = remember(expenses, selectedFilter) {
+        prepareMonthlyData(
+            expenses,
+            selectedFilter.monthCount
+        )
+    }
 
     val averageAmount: Double =
         if (monthlyChart.isNotEmpty()) {
@@ -59,6 +82,19 @@ fun MonthlySpendingChart(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(MonthlyFilterList.entries, key = { it.name }) { filterValue ->
+                FilterChip(
+                    selected = selectedFilter == filterValue,
+                    onClick = { selectedFilter = filterValue },
+                    label = { Text(filterValue.getDisplayName()) }
+                )
+            }
+        }
+
         LineChart(
             modifier = Modifier.height(250.dp),
             xAxisData = monthlyChart.map { it.monthName },
@@ -71,7 +107,7 @@ fun MonthlySpendingChart(
             tooltipFormatter = { formatCurrency(it.toDouble()) },
             showVerticalGrid = false,
             referenceLine = ReferenceLineConfig(
-                referenceLineValue =  averageAmount.toFloat(),
+                referenceLineValue = averageAmount.toFloat(),
                 referenceLineColor = MaterialTheme.colorScheme.error,
                 referenceLineLabel = "Average Spending",
                 referenceLineTextStyle = MaterialTheme.typography.labelSmall.copy(

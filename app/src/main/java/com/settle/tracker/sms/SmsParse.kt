@@ -18,6 +18,9 @@ object SmsParse {
         "reversal",
         "cashback",
     )
+    private val verificationKeywords = listOf(
+        "otp"
+    )
     private val categoryKeywords: Map<ExpenseCategory, List<String>> = mapOf(
         ExpenseCategory.FOOD to listOf(
             "zomato", "swiggy", "restaurant", "hotel", "brew", "food", "diner", "eatery"
@@ -59,6 +62,21 @@ object SmsParse {
         ExpenseCategory.TRAVEL to listOf(
             "uber", "ola", "rapido", "nammayatri",
             "cab", "taxi", "bike", "auto"
+        ),
+
+        ExpenseCategory.INVESTMENT to listOf(
+            "grow", "zerodha", "prudent", "invest",
+            "mutual", "fund", "share", "stock",
+            "groww", "zerodha", "kite", "coin",
+            "upstox", "angel", "angelone",
+            "paytm money", "kuvera", "etmoney",
+            "smallcase", "prudent"
+        ),
+
+        ExpenseCategory.GIFT to listOf(
+            "toy", "gift", "homecenter", "voucher",
+            "archies", "fnp", "ferns", "igp",
+            "hamleys", "firstcry", "toy", "gift card"
         )
     )
     private val amountRegex = Regex("""(?i)(rs\.?|inr)\s*[:.]?\s*([\d,]+(?:\.\d{1,2})?)""")

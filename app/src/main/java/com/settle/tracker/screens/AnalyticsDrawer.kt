@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -20,14 +19,12 @@ import androidx.compose.ui.unit.dp
 
 enum class SideBarItems {
     PERSONAL,
-    GROUPS,
-    TRENDS;
+    GROUPS;
 
     fun getDisplayName() = this.name.lowercase().replaceFirstChar { it.uppercase() }
     fun getDisplayIcon() = when (this) {
         PERSONAL -> Icons.Filled.Person
         GROUPS -> Icons.Filled.Groups
-        TRENDS -> Icons.AutoMirrored.Filled.ShowChart
     }
 }
 
