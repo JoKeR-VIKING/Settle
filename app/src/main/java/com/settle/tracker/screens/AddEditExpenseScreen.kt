@@ -71,6 +71,7 @@ import com.settle.tracker.utils.calculateEndAt
 import com.settle.tracker.utils.calculateNextOccurrence
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
+import com.settle.tracker.utils.rememberSoundManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -95,6 +96,7 @@ fun AddEditExpenseScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val expenseDao = AppDatabase.getInstance(context).expenseDraftDao()
+    val sound = rememberSoundManager()
 
     val datePickerSheetState = rememberModalBottomSheetState()
     val categoryPickerSheetState = rememberModalBottomSheetState()
@@ -243,10 +245,12 @@ fun AddEditExpenseScreen(
                     }
                 }
                 .addOnFailureListener { e ->
+                    sound.error()
                     isSubmittingExpense = false
                     Log.e("Firestore", "${e.message}")
                 }
         } catch (e: Exception) {
+            sound.error()
             isSubmittingExpense = false
             Log.e("Firestore", "${e.message}")
         }

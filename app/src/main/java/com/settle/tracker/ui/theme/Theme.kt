@@ -12,42 +12,75 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = BluePrimary,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF004BA0),
-    onPrimaryContainer = Color.White,
+    primary             = BrandTeal,
+    onPrimary           = Color.White,
+    primaryContainer    = BrandTealDeep,
+    onPrimaryContainer  = Color.White,
 
-    secondary = BlueSecondary,
-    onSecondary = Color.White,
+    secondary           = BrandBlue,
+    onSecondary         = Color.White,
+    secondaryContainer  = BrandBlueDeep,
+    onSecondaryContainer= Color.White,
 
-    background = DarkBackground,
-    surface = DarkSurface,
-    onSurface = Color(0xFFE0E0E0),
-    onBackground = Color(0xFFE0E0E0),
+    tertiary            = AccentLilac,
+    onTertiary          = Color(0xFF120B21),
+    tertiaryContainer   = Color(0xFF2A1F4A),
+    onTertiaryContainer = AccentLilac,
 
-    surfaceBright = Success,
-    error = Danger,
+    background          = DarkBackground,
+    onBackground        = DarkOnSurface,
+
+    surface             = DarkSurface,
+    onSurface           = DarkOnSurface,
+    surfaceVariant      = DarkSurfaceVar,
+    onSurfaceVariant    = DarkOnSurfaceVar,
+
+    surfaceBright       = Success,        // kept for compatibility (positive amount)
+    error               = Danger,
+    onError             = Color.White,
+    errorContainer      = Color(0xFF3B0F14),
+    onErrorContainer    = DangerLight,
+    outline             = Color(0xFF324155),
+    outlineVariant      = Color(0xFF1E2A3D)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = BluePrimary,
-    onPrimary = Color.White,
-    secondary = BlueSecondary,
-    onSecondary = Color.White,
+    primary             = BrandTeal,
+    onPrimary           = Color.White,
+    primaryContainer    = BrandTealSoft,
+    onPrimaryContainer  = BrandTealDeep,
 
-    background = LightBackground,
-    surface = LightSurface,
-    onSurface = Color(0xFF1C1B1F),
-    onBackground = Color(0xFF1C1B1F),
+    secondary           = BrandBlue,
+    onSecondary         = Color.White,
+    secondaryContainer  = BrandBlueSoft,
+    onSecondaryContainer= BrandBlueDeep,
 
-    surfaceBright = SuccessLight,
-    error = DangerLight
+    tertiary            = AccentLilac,
+    onTertiary          = Color.White,
+    tertiaryContainer   = Color(0xFFEDE4FF),
+    onTertiaryContainer = Color(0xFF3B2A6B),
+
+    background          = LightBackground,
+    onBackground        = LightOnSurface,
+
+    surface             = LightSurface,
+    onSurface           = LightOnSurface,
+    surfaceVariant      = LightSurfaceVar,
+    onSurfaceVariant    = LightOnSurfaceVar,
+
+    surfaceBright       = Success,
+    error               = Danger,
+    onError             = Color.White,
+    errorContainer      = Color(0xFFFFE0E0),
+    onErrorContainer    = Color(0xFF7A1F1F),
+    outline             = Color(0xFFCBD5D7),
+    outlineVariant      = Color(0xFFE4EEEF)
 )
 
 @Composable
 fun SettleTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
+    dynamicColor: Boolean = false, // keep brand-consistent: don't adopt Material You tint
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -55,14 +88,13 @@ fun SettleTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else      -> LightColorScheme
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+        typography  = Typography,
+        content     = content
     )
 }

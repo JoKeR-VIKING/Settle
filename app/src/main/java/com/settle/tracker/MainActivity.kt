@@ -6,6 +6,12 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideIntoContainer
+import androidx.compose.animation.slideOutOfContainer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -40,8 +46,10 @@ import com.settle.tracker.screens.GroupsScreen
 import com.settle.tracker.screens.LoginScreen
 import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.ui.theme.SettleTheme
-import com.settle.tracker.utils.Permissions
+import com.settle.tracker.utils.SettlePrefs
+import com.settle.tracker.utils.SettlePermission
 import com.settle.tracker.utils.createSmsNotificationChannel
+import com.settle.tracker.utils.rememberPermissionRequester
 import com.settle.tracker.utils.saveTokenToFirestore
 import kotlinx.coroutines.launch
 
@@ -73,19 +81,16 @@ sealed class Screen(val route: String) {
         ) = "group_expenses?groupId=$groupId"
     }
 
-    object Analytics: Screen("analytics")
+    object Analytics : Screen("analytics")
 }
 
 class MainActivity : ComponentActivity() {
-    private lateinit var permissions: Permissions
-
     private var destination by mutableStateOf<String?>(null)
     private var mode by mutableStateOf<String?>(null)
     private var smsExpenseId by mutableStateOf<String?>(null)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-
         setIntent(intent)
         updateIntent(intent)
     }
@@ -102,8 +107,9 @@ class MainActivity : ComponentActivity() {
 
         createSmsNotificationChannel(this)
 
-        permissions = Permissions(this)
-        lifecycle.addObserver(permissions)
+        // NOTE: Permissions are now requested on-demand at the exact moment
+        // the user needs them (SMS when tapping "Add From SMS", Contacts when
+        // adding members, Notifications right after first login).
 
         updateIntent(intent)
 
@@ -136,16 +142,26 @@ private fun AppContent(
     var currentUser by remember { mutableStateOf(googleAuthClient.getSignedInUser()) }
     val startDestination = remember {
         when {
-            currentUser == null ->
-                Screen.Login.route
-            currentUser?.phoneNumber.isNullOrBlank() ->
-                Screen.PhoneVerification.route
-            else ->
-                Screen.Expenses.route
+            currentUser == null -> Screen.Login.route
+            currentUser?.phoneNumber.isNullOrBlank() -> Screen.PhoneVerification.route
+            else -> Screen.Expenses.route
         }
     }
 
     val db = Firebase.firestore
+    val prefs = remember { SettlePrefs(activity.applicationContext) }
+
+    // Post-login: ask for POST_NOTIFICATIONS (polite, once)
+    val notifPermission = rememberPermissionRequester(
+        permission = SettlePermission.Notifications
+    ) { /* result ignored – user can grant later from settings */ }
+
+    LaunchedEffect(currentUser) {
+        if (currentUser != null && prefs.isFirstRun(SettlePrefs.PROMPT_NOTIFICATIONS)) {
+            prefs.markSeen(SettlePrefs.PROMPT_NOTIFICATIONS)
+            notifPermission.request()
+        }
+    }
 
     val onLoginSuccess: (FirebaseUser) -> Unit = { signedInUser ->
         val handleFailure = { e: Exception ->
@@ -157,11 +173,7 @@ private fun AppContent(
         }
 
         try {
-            val userRef =
-                db
-                    .collection("users")
-                    .document(signedInUser.uid)
-
+            val userRef = db.collection("users").document(signedInUser.uid)
             val userData = mutableMapOf<String, Any>(
                 "id" to signedInUser.uid,
                 "name" to (signedInUser.displayName ?: ""),
@@ -170,78 +182,47 @@ private fun AppContent(
                 "photoUrl" to (signedInUser.photoUrl ?: "")
             )
 
-            userRef
-                .get()
+            userRef.get()
                 .addOnSuccessListener { document ->
-                    if (!document.exists()) {
-                        userData["upiId"] = ""
-                    }
-
-                    userRef
-                        .set(userData, SetOptions.merge())
+                    if (!document.exists()) userData["upiId"] = ""
+                    userRef.set(userData, SetOptions.merge())
                         .addOnSuccessListener {
                             currentUser = signedInUser
-
-                            FirebaseMessaging
-                                .getInstance()
-                                .token
-                                .addOnSuccessListener { token ->
-                                    saveTokenToFirestore(token)
-                                }
-
+                            FirebaseMessaging.getInstance().token.addOnSuccessListener {
+                                saveTokenToFirestore(it)
+                            }
                             if (signedInUser.phoneNumber == null) {
                                 navController.navigate(Screen.PhoneVerification.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        inclusive = true
-                                    }
+                                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             } else {
                                 navController.navigate(Screen.Expenses.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        inclusive = true
-                                    }
+                                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             }
                         }
-                        .addOnFailureListener { e ->
-                            handleFailure(e)
-                        }
+                        .addOnFailureListener { e -> handleFailure(e) }
                 }
-                .addOnFailureListener { e ->
-                    handleFailure(e)
-                }
+                .addOnFailureListener { e -> handleFailure(e) }
         } catch (e: Exception) {
             handleFailure(e)
         }
     }
 
-    LaunchedEffect(
-        destination,
-        smsExpenseId,
-        mode,
-        currentUser
-    ) {
+    LaunchedEffect(destination, smsExpenseId, mode, currentUser) {
         if (currentUser == null) return@LaunchedEffect
-
         when (destination) {
             "add_edit_expense" -> {
                 if (smsExpenseId != null && mode != null) {
                     navController.navigate(
-                        Screen.AddEditExpense.createRoute(
-                            mode = mode,
-                            expenseId = smsExpenseId
-                        )
-                    ) {
-                        launchSingleTop = true
-                    }
+                        Screen.AddEditExpense.createRoute(mode = mode, expenseId = smsExpenseId)
+                    ) { launchSingleTop = true }
                 }
             }
             "groups" -> {
-                navController.navigate(Screen.Groups.route) {
-                    launchSingleTop = true
-                }
+                navController.navigate(Screen.Groups.route) { launchSingleTop = true }
             }
         }
     }
@@ -259,20 +240,36 @@ private fun AppContent(
                 NavHost(
                     navController = navController,
                     startDestination = startDestination,
+                    enterTransition = {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            animationSpec = tween(320)
+                        ) + fadeIn(tween(320))
+                    },
+                    exitTransition = {
+                        fadeOut(tween(220))
+                    },
+                    popEnterTransition = {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(320)
+                        ) + fadeIn(tween(320))
+                    },
+                    popExitTransition = {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(320)
+                        ) + fadeOut(tween(220))
+                    }
                 ) {
                     composable(Screen.Login.route) {
-                        LoginScreen(
-                            googleAuthClient,
-                            onLoginSuccess = onLoginSuccess
-                        )
+                        LoginScreen(googleAuthClient, onLoginSuccess = onLoginSuccess)
                     }
                     composable(Screen.PhoneVerification.route) {
                         PhoneVerificationScreen(
                             onPhoneVerified = {
                                 navController.navigate(Screen.Expenses.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        inclusive = true
-                                    }
+                                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             }
@@ -281,23 +278,14 @@ private fun AppContent(
                     composable(Screen.Expenses.route) {
                         ExpensesScreen(
                             onAddExpense = {
-                                navController.navigate(
-                                    Screen.AddEditExpense.createRoute(
-                                        mode = "ADD"
-                                    )
-                                ) {
+                                navController.navigate(Screen.AddEditExpense.createRoute(mode = "ADD")) {
                                     launchSingleTop = true
                                 }
                             },
                             onEditExpense = { mode, expenseId ->
                                 navController.navigate(
-                                    Screen.AddEditExpense.createRoute(
-                                        mode = mode,
-                                        expenseId = expenseId
-                                    )
-                                ) {
-                                    launchSingleTop = true
-                                }
+                                    Screen.AddEditExpense.createRoute(mode = mode, expenseId = expenseId)
+                                ) { launchSingleTop = true }
                             },
                             currentUser = currentUser!!
                         )
@@ -308,9 +296,7 @@ private fun AppContent(
                             onLogoutSuccess = {
                                 currentUser = null
                                 navController.navigate(Screen.Login.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        inclusive = true
-                                    }
+                                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             }
@@ -319,40 +305,31 @@ private fun AppContent(
                     composable(
                         Screen.AddEditExpense.route,
                         arguments = listOf(
-                            navArgument(name = Screen.AddEditExpense.ARG_MODE) {
+                            navArgument(Screen.AddEditExpense.ARG_MODE) {
                                 type = NavType.StringType
                                 nullable = false
                                 defaultValue = "ADD"
                             },
-                            navArgument(name = Screen.AddEditExpense.ARG_EXPENSE_ID) {
+                            navArgument(Screen.AddEditExpense.ARG_EXPENSE_ID) {
                                 type = NavType.StringType
                                 nullable = true
                                 defaultValue = null
                             },
-                            navArgument(name = Screen.AddEditExpense.ARG_GROUP_ID) {
+                            navArgument(Screen.AddEditExpense.ARG_GROUP_ID) {
                                 type = NavType.StringType
                                 nullable = true
                                 defaultValue = null
                             }
                         )
                     ) { navBackStackEntry ->
-                        val mode = navBackStackEntry
-                            .arguments
-                            ?.getString(Screen.AddEditExpense.ARG_MODE)
-                            ?: "ADD"
-                        val expenseId = navBackStackEntry
-                            .arguments
-                            ?.getString(Screen.AddEditExpense.ARG_EXPENSE_ID)
-                        val groupId = navBackStackEntry
-                            .arguments
-                            ?.getString(Screen.AddEditExpense.ARG_GROUP_ID)
+                        val m = navBackStackEntry.arguments?.getString(Screen.AddEditExpense.ARG_MODE) ?: "ADD"
+                        val expenseId = navBackStackEntry.arguments?.getString(Screen.AddEditExpense.ARG_EXPENSE_ID)
+                        val groupId = navBackStackEntry.arguments?.getString(Screen.AddEditExpense.ARG_GROUP_ID)
 
                         AddEditExpenseScreen(
-                            onBack = {
-                                navController.popBackStack()
-                            },
+                            onBack = { navController.popBackStack() },
                             currentUser = currentUser!!,
-                            mode = mode,
+                            mode = m,
                             expenseId = expenseId,
                             groupId = groupId
                         )
@@ -361,11 +338,7 @@ private fun AppContent(
                         GroupsScreen(
                             currentUser = currentUser!!,
                             onOpenGroup = { groupId ->
-                                navController.navigate(
-                                    Screen.GroupExpenses.createRoute(
-                                        groupId
-                                    )
-                                ) {
+                                navController.navigate(Screen.GroupExpenses.createRoute(groupId)) {
                                     launchSingleTop = true
                                 }
                             }
@@ -374,31 +347,21 @@ private fun AppContent(
                     composable(
                         Screen.GroupExpenses.route,
                         arguments = listOf(
-                            navArgument(name = Screen.GroupExpenses.ARG_GROUP_ID) {
+                            navArgument(Screen.GroupExpenses.ARG_GROUP_ID) {
                                 type = NavType.StringType
                                 nullable = false
                                 defaultValue = ""
                             }
                         )
                     ) { navBackStackEntry ->
-                        val groupId = navBackStackEntry
-                            .arguments
-                            ?.getString(Screen.GroupExpenses.ARG_GROUP_ID)
-
+                        val groupId = navBackStackEntry.arguments?.getString(Screen.GroupExpenses.ARG_GROUP_ID)
                         GroupExpensesScreen(
                             groupId = groupId!!,
-                            onBack = {
-                                navController.popBackStack()
-                            },
+                            onBack = { navController.popBackStack() },
                             onAddExpense = {
                                 navController.navigate(
-                                    Screen.AddEditExpense.createRoute(
-                                        mode = "ADD",
-                                        groupId = groupId
-                                    )
-                                ) {
-                                    launchSingleTop = true
-                                }
+                                    Screen.AddEditExpense.createRoute(mode = "ADD", groupId = groupId)
+                                ) { launchSingleTop = true }
                             },
                             onEditExpense = { mode, expenseId ->
                                 navController.navigate(
@@ -407,10 +370,8 @@ private fun AppContent(
                                         expenseId = expenseId,
                                         groupId = groupId
                                     )
-                                ) {
-                                    launchSingleTop = true
-                                }
-                            },
+                                ) { launchSingleTop = true }
+                            }
                         )
                     }
                     composable(Screen.Analytics.route) {

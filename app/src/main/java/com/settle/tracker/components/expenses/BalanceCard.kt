@@ -74,12 +74,13 @@ fun BalanceCard(
                     text = payerScheme.name,
                     style = MaterialTheme.typography.labelMedium,
                     textAlign = TextAlign.Center,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
             Box(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1.2f),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -130,7 +131,8 @@ fun BalanceCard(
                     text = receiverScheme.name,
                     style = MaterialTheme.typography.labelMedium,
                     textAlign = TextAlign.Center,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
         }

@@ -1,8 +1,10 @@
 package com.settle.tracker.screens
 
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,18 +13,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -35,8 +39,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
@@ -44,12 +53,17 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
-import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.common.CoachMarkOverlay
+import com.settle.tracker.components.common.CoachStep
+import com.settle.tracker.components.common.GroupRowSkeleton
 import com.settle.tracker.components.groups.CreateGroupModal
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
+import com.settle.tracker.ui.animations.bounceClickable
+import com.settle.tracker.ui.theme.BrandBlue
+import com.settle.tracker.ui.theme.BrandTeal
+import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.calculateNetBalances
-import com.settle.tracker.utils.dashedBorder
 import com.settle.tracker.utils.formatCurrency
 import java.util.UUID
 import kotlin.math.absoluteValue
@@ -68,96 +82,63 @@ fun GroupsScreen(
     onOpenGroup: (String) -> Unit
 ) {
     val groupModalSheetState = rememberModalBottomSheetState()
+    val context = LocalContext.current
+    val prefs = remember { SettlePrefs(context.applicationContext) }
 
     val db = Firebase.firestore
 
     var groupsWithBalance by remember { mutableStateOf<Map<String, GroupWithBalance>>(emptyMap()) }
     val groupListener = remember { mutableStateMapOf<String, ListenerRegistration>() }
     var showGroupModal by remember { mutableStateOf(false) }
-    var isFetching by remember { mutableStateOf(false) }
+    var isFetching by remember { mutableStateOf(true) }
     var isSubmitting by remember { mutableStateOf(false) }
 
     var groupId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var newGroupName by remember { mutableStateOf(TextFieldValue("")) }
 
+    var showCoach by remember { mutableStateOf(prefs.isFirstRun(SettlePrefs.TUTORIAL_GROUPS)) }
+
     fun createGroup() {
         isSubmitting = true
-
         val groupData = GroupScheme(
             id = groupId,
             groupName = newGroupName.text,
-            members = listOf(
-                currentUser.uid
-            ),
+            members = listOf(currentUser.uid),
             createdAt = System.currentTimeMillis(),
             createdBy = currentUser.uid
         )
-
-        db
-            .collection("groups")
-            .document(groupId)
-            .set(groupData)
+        db.collection("groups").document(groupId).set(groupData)
             .addOnSuccessListener {
                 isSubmitting = false
                 showGroupModal = false
+                groupId = UUID.randomUUID().toString()
+                newGroupName = TextFieldValue("")
             }
-            .addOnFailureListener {
-                isSubmitting = false
-            }
+            .addOnFailureListener { isSubmitting = false }
     }
 
     LaunchedEffect(Unit) {
-        isFetching = true
-
-        db
-            .collection("groups")
+        db.collection("groups")
             .whereArrayContains("members", currentUser.uid)
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.e("Firestore", "${error.message}")
-                    isFetching = false
-                    return@addSnapshotListener
-                }
-
-                if (snapshot == null) {
-                    isFetching = false
-                    return@addSnapshotListener
-                }
-
+                if (error != null) { Log.e("Firestore", "${error.message}"); isFetching = false; return@addSnapshotListener }
+                if (snapshot == null) { isFetching = false; return@addSnapshotListener }
                 val groups = snapshot.toObjects(GroupScheme::class.java)
-
                 groups.forEach { group ->
                     if (groupListener.containsKey(group.id)) return@forEach
-
-                    val registration =
-                        db
-                            .collection("groups")
-                            .document(group.id)
-                            .collection("expenses")
-                            .addSnapshotListener { expenseSnap, e ->
-                                if (e != null) {
-                                    Log.e("Firestore", "${e.message}")
-                                    isFetching = false
-                                    return@addSnapshotListener
-                                }
-
-                                val expenses =
-                                    expenseSnap?.toObjects(ExpenseScheme::class.java) ?: emptyList()
-                                val myBalance = calculateNetBalances(expenses)
-
-                                val updatedGroup = GroupWithBalance(
-                                    group = group,
-                                    balance = myBalance[currentUser.uid] ?: 0.0
-                                )
-
-                                groupsWithBalance =
-                                    groupsWithBalance + (group.id to updatedGroup)
-                            }
-
+                    val registration = db.collection("groups").document(group.id).collection("expenses")
+                        .addSnapshotListener { expenseSnap, e ->
+                            if (e != null) { Log.e("Firestore", "${e.message}"); isFetching = false; return@addSnapshotListener }
+                            val expenses = expenseSnap?.toObjects(ExpenseScheme::class.java) ?: emptyList()
+                            val myBalance = calculateNetBalances(expenses)
+                            groupsWithBalance = groupsWithBalance + (group.id to GroupWithBalance(
+                                group = group,
+                                balance = myBalance[currentUser.uid] ?: 0.0
+                            ))
+                        }
                     groupListener[group.id] = registration
                 }
-
                 isFetching = false
             }
     }
@@ -169,137 +150,252 @@ fun GroupsScreen(
         }
     }
 
-    LoadingScreenWrapper(
-        isLoading = isFetching,
-        message = "Fetching groups..."
-    ) {
-        Box(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 16.dp)
+                .padding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.spacedBy(36.dp),
-            ) {
-                Text(
-                    text = "Groups",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
+            GroupsHeader()
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    OutlinedButton(
-                        modifier = Modifier
-                            .fillMaxWidth(0.9f)
-                            .dashedBorder(
-                                2.dp,
-                                MaterialTheme.colorScheme.primary,
-                                cornerRadius = 20.dp,
-                                dashLength = 30f,
-                                gapLength = 15f
-                            ),
-                        contentPadding = PaddingValues(vertical = 14.dp),
-                        border = BorderStroke(
-                            width = 0.dp,
-                            color = Color.Transparent
-                        ),
-                        shape = RoundedCornerShape(25),
-                        onClick = { showGroupModal = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "Add New Group",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+            AddGroupCard(onClick = { showGroupModal = true })
 
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Text(
-                            "Add New",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
+            when {
+                isFetching -> Column {
+                    repeat(4) { GroupRowSkeleton() }
+                }
+                groupsWithBalance.isEmpty() -> EmptyGroupsState()
+                else -> {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        groupsWithBalance
-                            .values
-                            .sortedByDescending { it.group.createdAt }
-                            .forEach { groupWithBalance ->
-                                item {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable(
-                                                onClick = { onOpenGroup(groupWithBalance.group.id) }
-                                            )
-                                            .padding(horizontal = 22.dp, vertical = 20.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(25.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Group,
-                                            contentDescription = "Group Icon",
-                                        )
-
-                                        Text(
-                                            groupWithBalance.group.groupName,
-                                            style = MaterialTheme.typography.labelLarge
-                                        )
-
-                                        Column(
-                                            modifier = Modifier.weight(1f),
-                                            horizontalAlignment = Alignment.End,
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Text(
-                                                text = if (groupWithBalance.balance > 0.0) "You are owed" else "You owe",
-                                                style = MaterialTheme.typography.labelSmall
-                                            )
-
-                                            Text(
-                                                text = formatCurrency(groupWithBalance.balance.absoluteValue),
-                                                style = MaterialTheme.typography.labelLarge,
-                                                letterSpacing = 0.3.sp,
-                                                color = (
-                                                    if (groupWithBalance.balance > 0.0) MaterialTheme.colorScheme.surfaceBright
-                                                    else if (groupWithBalance.balance < 0.0) MaterialTheme.colorScheme.error
-                                                    else MaterialTheme.colorScheme.onSurface
-                                                    ),
-                                            )
-                                        }
-                                    }
-
-                                    HorizontalDivider(color = Color.Gray.copy(0.4f))
-                                }
-                            }
+                        val sortedGroups = groupsWithBalance.values.sortedByDescending { it.group.createdAt }
+                        items(sortedGroups, key = { it.group.id }) { gb ->
+                            GroupRowCard(gb = gb, onClick = { onOpenGroup(gb.group.id) })
+                        }
                     }
                 }
             }
+        }
 
-            if (showGroupModal) {
-                CreateGroupModal(
-                    sheetState = groupModalSheetState,
-                    onDismissRequest = { showGroupModal = false },
-                    groupName = newGroupName,
-                    onGroupNameChange = { newGroupName = it },
-                    isSubmitting = isSubmitting,
-                    onCreateGroup = { createGroup() }
+        if (showGroupModal) {
+            CreateGroupModal(
+                sheetState = groupModalSheetState,
+                onDismissRequest = { showGroupModal = false },
+                groupName = newGroupName,
+                onGroupNameChange = { newGroupName = it },
+                isSubmitting = isSubmitting,
+                onCreateGroup = { createGroup() }
+            )
+        }
+
+        CoachMarkOverlay(
+            visible = showCoach && !isFetching,
+            steps = listOf(
+                CoachStep("Your groups live here", "Create a group for trips, roommates, or any shared expense."),
+                CoachStep("See balances at a glance", "Each group shows if you owe or are owed money, instantly."),
+            ),
+            onDismiss = {
+                showCoach = false
+                prefs.markSeen(SettlePrefs.TUTORIAL_GROUPS)
+            }
+        )
+    }
+}
+
+@Composable
+private fun GroupsHeader() {
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 3 })
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Groups",
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(listOf(BrandTeal, BrandBlue))
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.GroupAdd,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
     }
 }
+
+@Composable
+private fun AddGroupCard(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(
+                        BrandTeal.copy(alpha = 0.12f),
+                        BrandBlue.copy(alpha = 0.12f)
+                    )
+                )
+            )
+            .bounceClickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(BrandTeal, BrandBlue))),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                "Start a new group",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                "Roommates, trips, parties… anything.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupRowCard(
+    gb: GroupWithBalance,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .bounceClickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Group,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                gb.group.groupName.ifBlank { "Untitled Group" },
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = when {
+                    gb.balance > 0.0 -> "You are owed"
+                    gb.balance < 0.0 -> "You owe"
+                    else             -> "All settled"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        Text(
+            text = if (gb.balance == 0.0) "—" else formatCurrency(gb.balance.absoluteValue),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.3.sp,
+            maxLines = 1,
+            color = when {
+                gb.balance > 0.0 -> MaterialTheme.colorScheme.surfaceBright
+                gb.balance < 0.0 -> MaterialTheme.colorScheme.error
+                else             -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
+    }
+}
+
+@Composable
+private fun EmptyGroupsState() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            BrandTeal.copy(alpha = 0.18f),
+                            BrandBlue.copy(alpha = 0.18f)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Group,
+                contentDescription = null,
+                tint = BrandTeal,
+                modifier = Modifier.size(44.dp)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("No groups yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Create your first group to start splitting bills with friends & family.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+// end of file
+

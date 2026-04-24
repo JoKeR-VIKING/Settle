@@ -1,6 +1,22 @@
 package com.settle.tracker.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Groups
@@ -8,34 +24,34 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.settle.tracker.ui.animations.bounceClickable
+import com.settle.tracker.ui.theme.BrandBlue
+import com.settle.tracker.ui.theme.BrandTeal
 
 sealed class BottomBarScreen(val route: String, val title: String, val icon: ImageVector) {
-    object Expenses : BottomBarScreen("expenses", "Expenses", Icons.Filled.PieChart)
-    object Groups : BottomBarScreen("groups", "Groups", Icons.Filled.Groups)
-    object Account : BottomBarScreen("account", "Account", Icons.Filled.Person)
+    object Expenses  : BottomBarScreen("expenses",  "Expenses",  Icons.Filled.PieChart)
+    object Groups    : BottomBarScreen("groups",    "Groups",    Icons.Filled.Groups)
+    object Account   : BottomBarScreen("account",   "Account",   Icons.Filled.Person)
     object Analytics : BottomBarScreen("analytics", "Analytics", Icons.Filled.BarChart)
 
     companion object {
         val routes = listOf(
-            Expenses.route,
-            Groups.route,
-            Analytics.route,
-            Account.route,
+            Expenses.route, Groups.route, Analytics.route, Account.route
         )
     }
 }
@@ -52,53 +68,92 @@ fun BottomBar(
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val haptic = LocalHapticFeedback.current
 
-    NavigationBar(
+    Row(
         modifier = Modifier
-            .height(85.dp)
-            .drawBehind {
-                val strokeWidth = 1.dp.toPx()
-
-                drawLine(
-                    color = Color(0xFF666666),
-                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                    end = androidx.compose.ui.geometry.Offset(size.width, 0f),
-                    strokeWidth = strokeWidth,
-                )
-            },
-        containerColor = MaterialTheme.colorScheme.background,
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .height(64.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         screens.forEach { screen ->
-            NavigationBarItem(
-                label = {
+            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+            BottomBarItem(
+                screen = screen,
+                selected = selected,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    if (!selected) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomBarItem(
+    screen: BottomBarScreen,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                if (selected)
+                    Brush.horizontalGradient(listOf(BrandTeal, BrandBlue))
+                else
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+            )
+            .bounceClickable(haptic = false, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = screen.icon,
+                contentDescription = screen.title,
+                tint = if (selected)
+                    MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn(tween(200)) + scaleIn(initialScale = 0.85f),
+                exit = fadeOut(tween(120)) + scaleOut(targetScale = 0.9f)
+            ) {
+                Row {
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         screen.title,
                         style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
-                },
-                icon = {
-                    Icon(
-                        screen.icon,
-                        contentDescription = screen.title,
-                    )
-                },
-                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color.Transparent,
-                    selectedIconColor = MaterialTheme.colorScheme.secondary,
-                    selectedTextColor = MaterialTheme.colorScheme.secondary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurface,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurface,
-                )
-            )
+                }
+            }
         }
     }
 }
