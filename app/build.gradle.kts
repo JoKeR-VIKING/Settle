@@ -19,8 +19,8 @@ android {
         applicationId = "com.settle.tracker"
         minSdk = 30
         targetSdk = 36
-        versionCode = 15
-        versionName = "1.1.5"
+        versionCode = 16
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
