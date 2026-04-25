@@ -181,6 +181,7 @@ fun RecurringExpensesList(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
+                                modifier = Modifier.weight(1f, fill = true),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -202,14 +203,19 @@ fun RecurringExpensesList(
                                 }
 
                                 Text(
-                                    text = template.expenseData.details,
-                                    style = MaterialTheme.typography.labelLarge
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    text = template.expenseData.details.ifBlank { "Untitled" },
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
 
                             Text(
+                                modifier = Modifier.padding(start = 8.dp),
                                 text = formatCurrency(template.expenseData.amount),
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1
                             )
                         }
 
@@ -224,22 +230,23 @@ fun RecurringExpensesList(
 
                                 template.expenseData.splits.forEach { splitParticipant ->
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
+                                            modifier = Modifier.weight(1f, fill = true),
                                             text = splitParticipant.name,
-                                            style = MaterialTheme.typography.labelMedium
+                                            style = MaterialTheme.typography.labelMedium,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                         )
 
                                         Text(
-                                            text = "---",
-                                            style = MaterialTheme.typography.labelMedium
-                                        )
-
-                                        Text(
+                                            modifier = Modifier.padding(start = 8.dp),
                                             text = formatCurrency(splitParticipant.amount),
-                                            style = MaterialTheme.typography.labelMedium
+                                            style = MaterialTheme.typography.labelMedium,
+                                            maxLines = 1
                                         )
                                     }
                                 }

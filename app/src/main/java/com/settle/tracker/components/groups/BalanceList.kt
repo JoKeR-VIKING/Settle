@@ -38,6 +38,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.components.LoadingScreenWrapper
+import com.settle.tracker.components.common.SuccessOverlay
 import com.settle.tracker.components.expenses.BalanceCard
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
@@ -78,6 +79,7 @@ fun BalanceList(
 
     var isLoading by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
+    var showSettleSuccess by remember { mutableStateOf(false) }
 
     fun simplifyBalances(
         balances: Map<String, Double>
@@ -166,6 +168,7 @@ fun BalanceList(
             .set(settlementData)
             .addOnSuccessListener {
                 isLoading = false
+                showSettleSuccess = true
             }
             .addOnFailureListener {
                 isLoading = false
@@ -368,5 +371,11 @@ fun BalanceList(
                 confirmColor = MaterialTheme.colorScheme.primary
             )
         }
+
+        SuccessOverlay(
+            visible = showSettleSuccess,
+            message = "Settled!",
+            onDismiss = { showSettleSuccess = false }
+        )
     }
 }
