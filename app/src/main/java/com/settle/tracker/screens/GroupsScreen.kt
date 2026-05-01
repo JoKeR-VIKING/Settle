@@ -404,6 +404,3 @@ private fun EmptyGroupsState() {
         )
     }
 }
-
-// end of file
-
