@@ -19,8 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -194,17 +196,17 @@ fun GroupsScreen(
             title = "Your groups",
             steps = listOf(
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.GroupAdd,
+                    icon = Icons.Filled.GroupAdd,
                     title = "Start a new group",
                     body = "Tap the \"Start a new group\" card at the top to create a shared expense group — like trips, flatmates, or a dinner night."
                 ),
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.Balance,
+                    icon = Icons.Filled.Balance,
                     title = "See balances instantly",
                     body = "Each group shows whether you owe or are owed — green means you lent, red means you owe."
                 ),
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.TouchApp,
+                    icon = Icons.Filled.TouchApp,
                     title = "Tap a group to open",
                     body = "Inside a group you can add expenses split across members, and settle up in one tap."
                 ),
