@@ -27,14 +27,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 fun Modifier.bounceClickable(
     enabled: Boolean = true,
-    haptic: Boolean = true,
     onClick: () -> Unit
 ): Modifier = composed {
     val interaction = remember { MutableInteractionSource() }
@@ -44,17 +41,14 @@ fun Modifier.bounceClickable(
         animationSpec = tween(120, easing = FastOutSlowInEasing),
         label = "bounce-scale"
     )
-    val hapticFeedback = LocalHapticFeedback.current
     this
         .graphicsLayer(scaleX = scale, scaleY = scale)
         .clickable(
             interactionSource = interaction,
             indication = null,
-            enabled = enabled
-        ) {
-            if (haptic) hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onClick()
-        }
+            enabled = enabled,
+            onClick = onClick
+        )
 }
 
 fun Modifier.breathing(

@@ -48,7 +48,6 @@ import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
 import com.settle.tracker.utils.getExpenseCategoryColor
 import com.settle.tracker.utils.getExpenseCategoryIcon
-import com.settle.tracker.utils.rememberSoundManager
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
@@ -66,7 +65,6 @@ fun ExpenseRow(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val expenseDao = remember { AppDatabase.getInstance(context).expenseDraftDao() }
-    val sound = rememberSoundManager()
 
     val currentUser = Firebase.auth.currentUser
     val isInPaidBy = expense.paidBy.any { it.id == currentUser?.uid }
@@ -96,7 +94,6 @@ fun ExpenseRow(
             .combinedClickable(
                 onClick = {
                     if (isSettlement) return@combinedClickable
-                    sound.tap()
                     if (expense.id.isBlank()) toggleSmsModal()
                     onEditExpense(
                         if (expense.id.isNotBlank()) "EDIT" else "SMS_ADD",
@@ -104,7 +101,6 @@ fun ExpenseRow(
                     )
                 },
                 onLongClick = {
-                    sound.delete()
                     showDeleteDialog = true
                 }
             )

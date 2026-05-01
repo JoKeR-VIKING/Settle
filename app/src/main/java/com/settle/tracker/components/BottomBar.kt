@@ -32,8 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -69,7 +67,6 @@ fun BottomBar(
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier
@@ -95,7 +92,6 @@ fun BottomBar(
                 modifier = Modifier.weight(weight),
                 onClick = {
                     if (!selected) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         navController.navigate(screen.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
@@ -131,7 +127,7 @@ private fun BottomBarItem(
                         )
                     )
             )
-            .bounceClickable(haptic = false, onClick = onClick),
+            .bounceClickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Row(
