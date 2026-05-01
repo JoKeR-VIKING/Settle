@@ -59,7 +59,6 @@ import com.settle.tracker.ui.theme.BrandTeal
 import com.settle.tracker.ui.theme.BrandTealDeep
 import com.settle.tracker.utils.SettleLinks
 import com.settle.tracker.utils.openUrl
-import com.settle.tracker.utils.rememberSoundManager
 import kotlinx.coroutines.launch
 
 @Composable
@@ -69,7 +68,6 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val sound = rememberSoundManager()
 
     var isLoading by remember { mutableStateOf(false) }
     var contentVisible by remember { mutableStateOf(false) }
@@ -188,15 +186,12 @@ fun LoginScreen(
                     Button(
                         onClick = {
                             isLoading = true
-                            sound.tap()
                             scope.launch {
                                 val loginSuccess = googleAuthClient.signIn()
                                 isLoading = false
                                 if (loginSuccess) {
-                                    sound.success()
                                     googleAuthClient.getSignedInUser()?.let(onLoginSuccess)
                                 } else {
-                                    sound.error()
                                     Toast.makeText(context, "Sign in failed", Toast.LENGTH_SHORT).show()
                                 }
                             }

@@ -196,17 +196,17 @@ fun GroupsScreen(
             title = "Your groups",
             steps = listOf(
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.GroupAdd,
+                    icon = Icons.Filled.GroupAdd,
                     title = "Start a new group",
                     body = "Tap the \"Start a new group\" card at the top to create a shared expense group — like trips, flatmates, or a dinner night."
                 ),
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.Balance,
+                    icon = Icons.Filled.Balance,
                     title = "See balances instantly",
                     body = "Each group shows whether you owe or are owed — green means you lent, red means you owe."
                 ),
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.TouchApp,
+                    icon = Icons.Filled.TouchApp,
                     title = "Tap a group to open",
                     body = "Inside a group you can add expenses split across members, and settle up in one tap."
                 ),
@@ -404,6 +404,3 @@ private fun EmptyGroupsState() {
         )
     }
 }
-
-// end of file
-

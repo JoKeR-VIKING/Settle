@@ -51,7 +51,6 @@ import com.settle.tracker.ui.theme.BrandBlue
 import com.settle.tracker.ui.theme.BrandTeal
 import com.settle.tracker.utils.SettlePermission
 import com.settle.tracker.utils.rememberPermissionRequester
-import com.settle.tracker.utils.rememberSoundManager
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +62,6 @@ fun FabMenu(
     onEditExpense: (String, String?) -> Unit
 ) {
     var showSmsModal by remember { mutableStateOf(false) }
-    val sound = rememberSoundManager()
 
     // On-demand SMS permissions: ask only when user taps "Add From SMS"
     val readSmsReq = rememberPermissionRequester(SettlePermission.ReadSms) { granted ->
@@ -117,10 +115,7 @@ fun FabMenu(
                 SmallFab(
                     label = "Add Expense",
                     icon = Icons.Filled.Receipt,
-                    onClick = {
-                        sound.tap()
-                        onAddExpense()
-                    }
+                    onClick = onAddExpense
                 )
             }
             AnimatedVisibility(
@@ -131,10 +126,7 @@ fun FabMenu(
                 SmallFab(
                     label = "Add From SMS",
                     icon = Icons.Filled.Sms,
-                    onClick = {
-                        sound.tap()
-                        readSmsReq.request()
-                    }
+                    onClick = { readSmsReq.request() }
                 )
             }
 
@@ -147,7 +139,6 @@ fun FabMenu(
                         Brush.linearGradient(listOf(BrandTeal, BrandBlue))
                     )
                     .bounceClickable {
-                        sound.tap()
                         onToggleExpanded()
                     },
                 contentAlignment = Alignment.Center

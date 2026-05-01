@@ -190,17 +190,17 @@ fun ExpensesScreen(
             title = "Welcome to Settle!",
             steps = listOf(
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.Add,
+                    icon = Icons.Filled.Add,
                     title = "Tap the + button",
                     body = "See the round teal button at the bottom-right? Tap it to log a new expense. You'll also see an option to import from a bank SMS."
                 ),
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.TouchApp,
+                    icon = Icons.Filled.TouchApp,
                     title = "Long-press to delete",
                     body = "Press and hold on any expense row to quickly delete it. A confirmation dialog will appear."
                 ),
                 CoachStep(
-                    icon = androidx.compose.material.icons.Icons.Filled.Repeat,
+                    icon = Icons.Filled.Repeat,
                     title = "Recurring expenses",
                     body = "Switch to the \"Recurring\" tab at the top to set up subscriptions, rent, or anything you pay on a schedule."
                 ),

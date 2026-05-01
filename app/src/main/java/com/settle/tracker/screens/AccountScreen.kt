@@ -26,12 +26,8 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,8 +84,6 @@ fun AccountScreen(
 
     var upiId by remember { mutableStateOf(TextFieldValue("")) }
     var upiIdSynced by remember { mutableStateOf("") }
-
-    var soundEnabled by remember { mutableStateOf(prefs.isSoundEnabled()) }
 
     val focusManager = LocalFocusManager.current
     val upiIdFocus = remember { FocusRequester() }
@@ -179,17 +173,6 @@ fun AccountScreen(
                 ThemeSelectorCard(
                     currentMode = themeState.mode.value,
                     onSelect = { themeState.set(it) }
-                )
-
-                ToggleRow(
-                    icon = if (soundEnabled) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
-                    title = "Sound & Haptics",
-                    subtitle = "Tactile feedback on taps & actions",
-                    checked = soundEnabled,
-                    onToggle = {
-                        soundEnabled = it
-                        prefs.setSoundEnabled(it)
-                    }
                 )
 
                 SectionLabel("About")
@@ -329,47 +312,6 @@ private fun ThemeSelectorCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ToggleRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(18.dp))
-        }
-        Spacer(Modifier.size(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                checkedTrackColor = MaterialTheme.colorScheme.primary
-            )
-        )
     }
 }
 

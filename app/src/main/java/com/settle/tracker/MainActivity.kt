@@ -47,8 +47,6 @@ import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.ui.theme.SettleTheme
 import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.SettlePermission
-import com.settle.tracker.utils.SoundManager
-import com.settle.tracker.utils.LocalSoundManager
 import com.settle.tracker.utils.LocalThemeState
 import com.settle.tracker.utils.rememberThemeState
 import com.settle.tracker.utils.createSmsNotificationChannel
@@ -143,7 +141,6 @@ private fun AppContent(
     val showBottomBar = currentRoute in BottomBarScreen.routes
 
     val googleAuthClient = remember { GoogleAuthClient(activity) }
-    val soundManager = remember { SoundManager(activity.applicationContext) }
     val themeState = rememberThemeState(activity)
     var currentUser by remember { mutableStateOf(googleAuthClient.getSignedInUser()) }
     val startDestination = remember {
@@ -235,7 +232,6 @@ private fun AppContent(
 
     SettleTheme(themeMode = themeState.mode.value) {
         CompositionLocalProvider(
-            LocalSoundManager provides soundManager,
             LocalThemeState provides themeState
         ) {
         Scaffold(
