@@ -63,11 +63,15 @@ fun FabMenu(
 ) {
     var showSmsModal by remember { mutableStateOf(false) }
 
+    val receiveSmsReq = rememberPermissionRequester(SettlePermission.ReceiveSms) {
+        showSmsModal = true
+        onToggleExpanded()
+    }
+
     // On-demand SMS permissions: ask only when user taps "Add From SMS"
     val readSmsReq = rememberPermissionRequester(SettlePermission.ReadSms) { granted ->
         if (granted) {
-            showSmsModal = true
-            onToggleExpanded()
+            receiveSmsReq.request()
         }
     }
 

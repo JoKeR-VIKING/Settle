@@ -58,6 +58,7 @@ import com.settle.tracker.components.common.GroupRowSkeleton
 import com.settle.tracker.components.groups.CreateGroupModal
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
+import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.ui.animations.bounceClickable
 import com.settle.tracker.ui.theme.BrandBlue
 import com.settle.tracker.ui.theme.BrandTeal
@@ -95,7 +96,8 @@ fun GroupsScreen(
     var groupId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var newGroupName by remember { mutableStateOf(TextFieldValue("")) }
 
-    var showCoach by remember { mutableStateOf(prefs.isFirstRun(SettlePrefs.TUTORIAL_GROUPS)) }
+    var userScheme by remember { mutableStateOf<UserScheme?>(null) }
+    var showCoach by remember { mutableStateOf(false) }
 
     fun createGroup() {
         isSubmitting = true
@@ -114,6 +116,17 @@ fun GroupsScreen(
                 newGroupName = TextFieldValue("")
             }
             .addOnFailureListener { isSubmitting = false }
+    }
+
+    LaunchedEffect(currentUser.uid) {
+        db.collection("users").document(currentUser.uid)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    val scheme = snapshot.toObject(UserScheme::class.java)
+                    userScheme = scheme
+                    showCoach = scheme?.tourTaken == false && prefs.isFirstRun(SettlePrefs.TUTORIAL_GROUPS)
+                }
+            }
     }
 
     LaunchedEffect(Unit) {
@@ -214,6 +227,9 @@ fun GroupsScreen(
             onDismiss = {
                 showCoach = false
                 prefs.markSeen(SettlePrefs.TUTORIAL_GROUPS)
+                if (prefs.allToursSeen()) {
+                    db.collection("users").document(currentUser.uid).update("tourTaken", true)
+                }
             }
         )
     }

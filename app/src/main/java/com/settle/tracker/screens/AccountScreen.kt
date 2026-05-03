@@ -190,13 +190,11 @@ fun AccountScreen(
                     subtitle = "Re-show the quick intro tutorials",
                     onClick = {
                         // Reset first-run flags so coachmarks appear again
-                        context
-                            .getSharedPreferences("settle_prefs", android.content.Context.MODE_PRIVATE)
-                            .edit()
-                            .putBoolean("first_run_${SettlePrefs.TUTORIAL_EXPENSES}", true)
-                            .putBoolean("first_run_${SettlePrefs.TUTORIAL_GROUPS}", true)
-                            .putBoolean("first_run_${SettlePrefs.TUTORIAL_ANALYTICS}", true)
-                            .apply()
+                        prefs.resetTours()
+                        db.collection("users").document(user!!.uid)
+                            .update("tourTaken", false)
+                            .addOnFailureListener { Log.e("Firestore", "Failed to reset tour: ${it.message}") }
+
                         Toast.makeText(
                             context,
                             "Tour reset! Visit Expenses, Groups or Analytics to see it again.",

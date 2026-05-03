@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,14 +46,13 @@ import com.settle.tracker.screens.GroupsScreen
 import com.settle.tracker.screens.LoginScreen
 import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.ui.theme.SettleTheme
-import com.settle.tracker.utils.SettlePrefs
-import com.settle.tracker.utils.SettlePermission
 import com.settle.tracker.utils.LocalThemeState
-import com.settle.tracker.utils.rememberThemeState
+import com.settle.tracker.utils.SettlePermission
+import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.createSmsNotificationChannel
 import com.settle.tracker.utils.rememberPermissionRequester
+import com.settle.tracker.utils.rememberThemeState
 import com.settle.tracker.utils.saveTokenToFirestore
-import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
@@ -154,15 +154,24 @@ private fun AppContent(
     val db = Firebase.firestore
     val prefs = remember { SettlePrefs(activity.applicationContext) }
 
-    // Post-login: ask for POST_NOTIFICATIONS (polite, once)
-    val notifPermission = rememberPermissionRequester(
-        permission = SettlePermission.Notifications
-    ) { /* result ignored – user can grant later from settings */ }
+    // Initial permission sequence: Notifications -> Read SMS -> Receive SMS (polite ask)
+    val receiveSmsPermission = rememberPermissionRequester(
+        permission = SettlePermission.ReceiveSms,
+        showSettingsOnDenial = false
+    ) { }
+    val readSmsPermission = rememberPermissionRequester(
+        permission = SettlePermission.ReadSms,
+        showSettingsOnDenial = false
+    ) { receiveSmsPermission.request() }
+    val initialPermissions = rememberPermissionRequester(
+        permission = SettlePermission.Notifications,
+        showSettingsOnDenial = false
+    ) { readSmsPermission.request() }
 
     LaunchedEffect(currentUser) {
-        if (currentUser != null && prefs.isFirstRun(SettlePrefs.PROMPT_NOTIFICATIONS)) {
-            prefs.markSeen(SettlePrefs.PROMPT_NOTIFICATIONS)
-            notifPermission.request()
+        if (currentUser != null && prefs.isFirstRun(SettlePrefs.PROMPT_INITIAL_PERMISSIONS)) {
+            prefs.markSeen(SettlePrefs.PROMPT_INITIAL_PERMISSIONS)
+            initialPermissions.request()
         }
     }
 
@@ -187,7 +196,10 @@ private fun AppContent(
 
             userRef.get()
                 .addOnSuccessListener { document ->
-                    if (!document.exists()) userData["upiId"] = ""
+                    if (!document.exists()) {
+                        userData["upiId"] = ""
+                        userData["tourTaken"] = false
+                    }
                     userRef.set(userData, SetOptions.merge())
                         .addOnSuccessListener {
                             currentUser = signedInUser
@@ -381,7 +393,7 @@ private fun AppContent(
                         )
                     }
                     composable(Screen.Analytics.route) {
-                        AnalyticsScreen()
+                        AnalyticsScreen(currentUser = currentUser!!)
                     }
                 }
             }

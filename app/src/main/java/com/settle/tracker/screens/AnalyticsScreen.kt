@@ -19,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,23 +27,40 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.analytics.groups.GroupAnalytics
 import com.settle.tracker.components.analytics.personal.PersonalAnalytics
 import com.settle.tracker.components.common.CoachMarkOverlay
 import com.settle.tracker.components.common.CoachStep
+import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.utils.SettlePrefs
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalyticsScreen() {
+fun AnalyticsScreen(currentUser: FirebaseUser) {
     val context = LocalContext.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val prefs = remember { SettlePrefs(context.applicationContext) }
+    val db = Firebase.firestore
 
     var selectedSection by remember { mutableStateOf(SideBarItems.PERSONAL) }
-    var showCoach by remember { mutableStateOf(prefs.isFirstRun(SettlePrefs.TUTORIAL_ANALYTICS)) }
+    var userScheme by remember { mutableStateOf<UserScheme?>(null) }
+    var showCoach by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentUser.uid) {
+        db.collection("users").document(currentUser.uid)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    val scheme = snapshot.toObject(UserScheme::class.java)
+                    userScheme = scheme
+                    showCoach = scheme?.tourTaken == false && prefs.isFirstRun(SettlePrefs.TUTORIAL_ANALYTICS)
+                }
+            }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -117,6 +135,9 @@ fun AnalyticsScreen() {
                     onDismiss = {
                         showCoach = false
                         prefs.markSeen(SettlePrefs.TUTORIAL_ANALYTICS)
+                        if (prefs.allToursSeen()) {
+                            db.collection("users").document(currentUser.uid).update("tourTaken", true)
+                        }
                     }
                 )
             }

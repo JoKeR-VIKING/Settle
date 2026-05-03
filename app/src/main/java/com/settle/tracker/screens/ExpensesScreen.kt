@@ -53,6 +53,7 @@ import com.settle.tracker.components.common.FabOverlay
 import com.settle.tracker.components.expenses.ExpenseTable
 import com.settle.tracker.components.expenses.RecurringExpensesList
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.ui.theme.BrandBlue
 import com.settle.tracker.ui.theme.BrandTeal
 import com.settle.tracker.utils.SettlePrefs
@@ -83,12 +84,24 @@ fun ExpensesScreen(
     var expanded by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(DashboardType.EXPENSES) }
 
-    var showCoach by remember { mutableStateOf(prefs.isFirstRun(SettlePrefs.TUTORIAL_EXPENSES)) }
+    var userScheme by remember { mutableStateOf<UserScheme?>(null) }
+    var showCoach by remember { mutableStateOf(false) }
 
     val onDeleteExpense: (String) -> Unit = { expenseId ->
         db.collection("users").document(currentUser.uid)
             .collection("expenses").document(expenseId).delete()
             .addOnFailureListener { Log.e("Firestore", "${it.message}") }
+    }
+
+    LaunchedEffect(currentUser.uid) {
+        db.collection("users").document(currentUser.uid)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    val scheme = snapshot.toObject(UserScheme::class.java)
+                    userScheme = scheme
+                    showCoach = scheme?.tourTaken == false && prefs.isFirstRun(SettlePrefs.TUTORIAL_EXPENSES)
+                }
+            }
     }
 
     LaunchedEffect(Unit) {
@@ -208,6 +221,9 @@ fun ExpensesScreen(
             onDismiss = {
                 showCoach = false
                 prefs.markSeen(SettlePrefs.TUTORIAL_EXPENSES)
+                if (prefs.allToursSeen()) {
+                    db.collection("users").document(currentUser.uid).update("tourTaken", true)
+                }
             }
         )
     }

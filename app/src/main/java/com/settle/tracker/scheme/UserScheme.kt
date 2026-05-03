@@ -9,5 +9,6 @@ data class UserScheme(
     val name: String = "",
     val email: String = "",
     val phoneNumber: String = "",
-    val photoUrl: String = ""
+    val photoUrl: String = "",
+    val tourTaken: Boolean = false
 )

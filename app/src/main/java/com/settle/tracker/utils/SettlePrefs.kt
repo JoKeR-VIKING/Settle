@@ -14,6 +14,20 @@ class SettlePrefs(context: Context) {
     fun isFirstRun(key: String): Boolean = sp.getBoolean("first_run_$key", true)
     fun markSeen(key: String) { sp.edit { putBoolean("first_run_$key", false) } }
 
+    fun allToursSeen(): Boolean {
+        return !isFirstRun(TUTORIAL_EXPENSES) &&
+               !isFirstRun(TUTORIAL_GROUPS) &&
+               !isFirstRun(TUTORIAL_ANALYTICS)
+    }
+
+    fun resetTours() {
+        sp.edit {
+            putBoolean("first_run_$TUTORIAL_EXPENSES", true)
+            putBoolean("first_run_$TUTORIAL_GROUPS", true)
+            putBoolean("first_run_$TUTORIAL_ANALYTICS", true)
+        }
+    }
+
     fun readThemeMode(): ThemeMode {
         val raw = sp.getString("theme_mode", ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
         return runCatching { ThemeMode.valueOf(raw) }.getOrDefault(ThemeMode.SYSTEM)
@@ -24,6 +38,7 @@ class SettlePrefs(context: Context) {
         const val TUTORIAL_EXPENSES = "tutorial_expenses"
         const val TUTORIAL_GROUPS = "tutorial_groups"
         const val TUTORIAL_ANALYTICS = "tutorial_analytics"
+        const val PROMPT_INITIAL_PERMISSIONS = "prompt_initial_permissions"
         const val PROMPT_NOTIFICATIONS = "prompt_notifications"
     }
 }
