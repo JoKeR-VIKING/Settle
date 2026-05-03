@@ -58,10 +58,8 @@ fun ExpenseTable(
 
             itemsIndexed(
                 monthExpenses,
-                key = { index, expense ->
-                    expense.id.takeIf { it.isNotBlank() }
-                        ?: smsExpenseIds?.getOrNull(index)
-                        ?: "$monthYear-$index"
+                key = { _, expense ->
+                    "${expense.timestamp}_${expense.id}"
                 }
             ) { index, expense ->
                 ExpenseRow(
