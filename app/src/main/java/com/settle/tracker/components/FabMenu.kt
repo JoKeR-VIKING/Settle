@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -109,7 +110,9 @@ fun FabMenu(
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(16.dp)
         ) {
             AnimatedVisibility(
                 visible = expanded,

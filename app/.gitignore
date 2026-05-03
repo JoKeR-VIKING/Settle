@@ -31,7 +31,7 @@ Thumbs.db
 *.class
 
 # Firebase
-google-services.json
+src/prod/google-services.json
 
 # Fastlane
 fastlane/report.xml

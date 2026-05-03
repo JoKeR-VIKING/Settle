@@ -19,8 +19,8 @@ android {
         applicationId = "com.settle.tracker"
         minSdk = 30
         targetSdk = 36
-        versionCode = 18
-        versionName = "2.0"
+        versionCode = 19
+        versionName = "2.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -32,6 +32,19 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            manifestPlaceholders["appName"] = "[DEBUG] Settle"
+        }
+        create("prod") {
+            dimension = "env"
+            manifestPlaceholders["appName"] = "Settle"
         }
     }
     compileOptions {
