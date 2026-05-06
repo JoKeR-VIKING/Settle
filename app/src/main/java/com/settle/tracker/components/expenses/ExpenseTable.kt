@@ -9,12 +9,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.settle.tracker.scheme.ExpenseScheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -31,8 +33,27 @@ fun ExpenseTable(
 ) {
     val formatter = remember { SimpleDateFormat("MMMM yyyy", Locale.getDefault()) }
 
-    val groupedExpenses = remember(expenses) {
-        expenses.groupBy { formatter.format(Date(it.timestamp)) }
+    // Pair expenses with their corresponding sms IDs to maintain correct mapping after grouping
+    val itemsWithSmsId = remember(expenses, smsExpenseIds) {
+        expenses.mapIndexed { index, expense ->
+            expense to smsExpenseIds?.getOrNull(index)
+        }
+    }
+
+    // Attach minimal debug data to Crashlytics to help reproduce list crashes
+    SideEffect {
+        val crashlytics = FirebaseCrashlytics.getInstance()
+        val summary = itemsWithSmsId.joinToString { (exp, smsId) ->
+            "{id:${exp.id}, sms:${smsId}, t:${exp.timestamp}}"
+        }
+        crashlytics.setCustomKey("expense_table_size", itemsWithSmsId.size)
+        crashlytics.log("Table State: $summary")
+    }
+
+    val groupedExpenses = remember(itemsWithSmsId) {
+        itemsWithSmsId.groupBy { (expense, _) ->
+            formatter.format(Date(expense.timestamp))
+        }
     }
 
     LazyColumn(
@@ -40,7 +61,7 @@ fun ExpenseTable(
         contentPadding = PaddingValues(bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        groupedExpenses.forEach { (monthYear, monthExpenses) ->
+        groupedExpenses.forEach { (monthYear, monthItems) ->
             item(key = "header-$monthYear") {
                 Text(
                     modifier = Modifier
@@ -57,14 +78,19 @@ fun ExpenseTable(
             }
 
             itemsIndexed(
-                monthExpenses,
-                key = { _, expense ->
-                    "${expense.timestamp}_${expense.id}"
+                monthItems,
+                key = { index, (expense, smsId) ->
+                    // Priority: unique expense id -> sms draft id -> fallback with timestamp and index
+                    when {
+                        expense.id.isNotEmpty() -> expense.id
+                        !smsId.isNullOrEmpty() -> smsId
+                        else -> "${expense.timestamp}_${monthYear}_$index"
+                    }
                 }
-            ) { index, expense ->
+            ) { _, (expense, smsId) ->
                 ExpenseRow(
                     expense = expense,
-                    smsExpenseId = smsExpenseIds?.getOrNull(index),
+                    smsExpenseId = smsId,
                     toggleSmsModal = toggleSmsModal,
                     onEditExpense = onEditExpense,
                     onDeleteExpense = onDeleteExpense
