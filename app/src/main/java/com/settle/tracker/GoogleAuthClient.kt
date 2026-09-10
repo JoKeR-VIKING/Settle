@@ -8,7 +8,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -21,14 +21,12 @@ class GoogleAuthClient(private val context: Context) {
 
     suspend fun signIn(): Boolean {
         try {
-            val googleIdOption = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false)
-                .setServerClientId(context.getString(R.string.default_web_client_id))
-                .setAutoSelectEnabled(false)
-                .build()
+            val googleSignInOption = GetSignInWithGoogleOption.Builder(
+                context.getString(R.string.default_web_client_id)
+            ).build()
 
             val request = GetCredentialRequest.Builder()
-                .addCredentialOption(googleIdOption)
+                .addCredentialOption(googleSignInOption)
                 .build()
 
             val result = credentialManager.getCredential(
@@ -37,7 +35,9 @@ class GoogleAuthClient(private val context: Context) {
             )
 
             val credential = result.credential
-            if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+            if (credential is CustomCredential &&
+                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+            ) {
                 try {
                     val googleIdTokenCredential =
                         GoogleIdTokenCredential.createFrom(credential.data)
@@ -56,7 +56,7 @@ class GoogleAuthClient(private val context: Context) {
             }
         } catch (e: GetCredentialException) {
             Log.e("Auth", "Sign in failed: ${e.message}")
-            return false // User cancelled or error
+            return false
         } catch (e: Exception) {
             Log.e("Auth", "Firebase auth failed: ${e.message}")
             return false
