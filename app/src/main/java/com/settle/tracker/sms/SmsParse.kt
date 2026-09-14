@@ -6,21 +6,6 @@ import java.security.MessageDigest
 import java.util.Locale
 
 object SmsParse {
-    private val debitKeywords =
-        listOf("spent", "debit", "debited", "txn", "sent", "paid", "payment")
-    private val creditKeywords = listOf(
-        "credited",
-        "receive",
-        "received",
-        "deposited",
-        "added",
-        "refund",
-        "reversal",
-        "cashback",
-    )
-    private val verificationKeywords = listOf(
-        "otp"
-    )
     private val categoryKeywords: Map<ExpenseCategory, List<String>> = mapOf(
         ExpenseCategory.FOOD to listOf(
             "zomato", "swiggy", "restaurant", "hotel", "brew", "food", "diner", "eatery"
@@ -79,31 +64,39 @@ object SmsParse {
             "hamleys", "firstcry", "toy", "gift card"
         )
     )
-    private val amountRegex = Regex("""(?i)(rs\.?|inr)\s*[:.]?\s*([\d,]+(?:\.\d{1,2})?)""")
     private val detailsRegexOne = Regex("""(?i)\b(at|to)\s+([^\s.\n]+)""")
     private val detailsRegexTwo = Regex("""(?i)\b(on)\s+([^\s.\n]+)""")
     private val cardRegex = Regex("""(?i)(card|credit card).*?(?:xx|ending)?\s*(\d{4})""")
     private val amazonPayRegex = Regex("""(?i)\bapay\s+(wallet\s+)?balance\b""")
     private val accountRegex = Regex("""(?i)(a/c|account).*?(\*+\d{4}|\d{4})""")
 
+    /**
+     * The classification, amount extraction, and merchant grammar below is
+     * delegated to [SmsGrammar] (ported from abhirajsinha/omoi-sms-parser) —
+     * it correctly ignores OTPs, promos, card-bill reminders, upcoming EMI/SIP
+     * pre-notices, credits, and balance/limit lines that the previous
+     * keyword-based gate here used to misclassify. Category and payment-source
+     * (card/account/wallet) detection stay bespoke to this app, since the
+     * upstream library does not attempt either.
+     */
     fun parse(
         sender: String,
         body: String,
         receivedAt: Long,
     ): ExpenseScheme? {
-        val text = body.lowercase(Locale.getDefault())
+        if (SenderClassifier.classify(sender) == SenderTrust.UNTRUSTED) return null
 
-        if (debitKeywords.none { text.contains(it) } || creditKeywords.any { text.contains(it) })
-            return null
-
-        val amount = extractAmount(text)
+        val debit = SmsGrammar.classifySms(body) as? SmsGrammar.SmsClass.Debit ?: return null
+        val amount = debit.amountCents / 100.0
         if (amount == 0.0) return null
+
+        val text = body.lowercase(Locale.getDefault())
 
         val paidFrom = extractPaidFrom(text)
         if (paidFrom == "") return null
 
         val id = generateFingerprint(sender, body, receivedAt)
-        val details = extractDetails(sender, text)
+        val details = extractDetails(sender, debit.merchantRaw, text)
         val category = extractCategory(text)
 
         return ExpenseScheme(
@@ -114,14 +107,6 @@ object SmsParse {
             category = category.name,
             timestamp = receivedAt
         )
-    }
-
-    private fun extractAmount(text: String): Double {
-        val match = amountRegex.find(text) ?: return 0.0
-        return match
-            .groupValues[2]
-            .replace(",", "")
-            .toDoubleOrNull() ?: 0.0
     }
 
     private fun isValidDetail(candidate: String): Boolean {
@@ -139,8 +124,13 @@ object SmsParse {
 
     private fun extractDetails(
         sender: String,
+        merchantRaw: String?,
         text: String
     ): String {
+        merchantRaw?.trim()?.let { candidate ->
+            if (isValidDetail(candidate)) return candidate.uppercase()
+        }
+
         detailsRegexOne.findAll(text).forEach { match ->
             val candidate = match.groupValues[2].trim()
 

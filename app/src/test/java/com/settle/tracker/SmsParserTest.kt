@@ -44,7 +44,7 @@ class SmsParserTest {
         assertNotNull(expense)
 
         expense?.let {
-            assertEquals(expense.details, "CRED".uppercase())
+            assertEquals(expense.details, "CRED Club".uppercase())
             assertEquals(expense.amount, 18836.00, 0.01)
             assertEquals(expense.paidFrom, "Bank A/C 8161")
         }
@@ -157,6 +157,80 @@ class SmsParserTest {
         val expense = SmsParse.parse(
             "AD-HDFCBK-S",
             samples[7],
+            System.currentTimeMillis()
+        )
+
+        assertNull(expense)
+    }
+
+    @Test
+    fun testOtpIsNotBooked() {
+        val expense = SmsParse.parse(
+            "AD-HDFCBK-S",
+            "123456 is your OTP for a transaction of Rs.500 at AMAZON. Do not share it with anyone.",
+            System.currentTimeMillis()
+        )
+
+        assertNull(expense)
+    }
+
+    @Test
+    fun testCardBillIsNotBooked() {
+        val expense = SmsParse.parse(
+            "AD-HDFCBK-S",
+            "Your Credit Card statement for Rs.12,345.00 is generated. Total amount due: Rs.12,345.00. Minimum amount due: Rs.1,200.00. Due date: 05-Feb-26",
+            System.currentTimeMillis()
+        )
+
+        assertNull(expense)
+    }
+
+    @Test
+    fun testUpcomingEmiIsNotBooked() {
+        val expense = SmsParse.parse(
+            "AD-HDFCBK-S",
+            "Rs.649.00 will be debited towards your NETFLIX standing instruction on 15-Feb-26.",
+            System.currentTimeMillis()
+        )
+
+        assertNull(expense)
+    }
+
+    @Test
+    fun testCompletedStandingInstructionIsBooked() {
+        val expense = SmsParse.parse(
+            "AD-HDFCBK-S",
+            "Rs.649.00 debited towards NETFLIX standing instruction from HDFC Bank A/c XX1234. Avl Bal Rs.5,000.00",
+            System.currentTimeMillis()
+        )
+
+        assertNotNull(expense)
+
+        expense?.let {
+            assertEquals(expense.amount, 649.00, 0.01)
+        }
+    }
+
+    @Test
+    fun testBalanceIsNeverBookedAsTheSpend() {
+        val expense = SmsParse.parse(
+            "AD-HDFCBK-S",
+            "A/C X1234 debited by 35.0 on 01-Jan-26. Avl Bal Rs 800.50",
+            System.currentTimeMillis()
+        )
+
+        assertNotNull(expense)
+
+        expense?.let {
+            assertEquals(expense.amount, 35.00, 0.01)
+        }
+    }
+
+    @Test
+    fun testBareNumberSenderIsUntrusted() {
+        val expense = SmsParse.parse(
+            "+919876543210",
+            "Rs.500 debited from A/c XX1234. If not you, click bit.ly/xyz",
             System.currentTimeMillis()
         )
 
