@@ -38,6 +38,7 @@ import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.FabMenu
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.common.FabOverlay
+import com.settle.tracker.components.expenses.ExpenseSearchBar
 import com.settle.tracker.components.expenses.ExpenseTable
 import com.settle.tracker.components.expenses.RecurringExpensesList
 import com.settle.tracker.components.groups.BalanceList
@@ -46,6 +47,7 @@ import com.settle.tracker.components.groups.GroupTabRow
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.SplitParticipant
+import com.settle.tracker.utils.filterBySearch
 
 enum class GroupTab {
     EXPENSES,
@@ -71,6 +73,7 @@ fun GroupExpensesScreen(
 
     var expenses by remember { mutableStateOf<List<ExpenseScheme>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     val onDeleteExpense: (String) -> Unit = { expenseId ->
         isFetching = true
@@ -233,7 +236,7 @@ fun GroupExpensesScreen(
                             )
                         },
                     ) {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clickable(
@@ -242,13 +245,29 @@ fun GroupExpensesScreen(
                                 ) {
                                     focusManager.clearFocus()
                                 },
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            ExpenseTable(
-                                expenses = expenses,
-                                onEditExpense = onEditExpense,
-                                onDeleteExpense = onDeleteExpense,
-                                modifier = Modifier
-                            )
+                            if (expenses.isNotEmpty()) {
+                                ExpenseSearchBar(
+                                    query = searchQuery,
+                                    onQueryChange = { searchQuery = it }
+                                )
+                            }
+
+                            val filteredExpenses = expenses.filterBySearch(searchQuery)
+                            if (expenses.isNotEmpty() && filteredExpenses.isEmpty()) {
+                                NoSearchResultsState(
+                                    query = searchQuery,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            } else {
+                                ExpenseTable(
+                                    expenses = filteredExpenses,
+                                    onEditExpense = onEditExpense,
+                                    onDeleteExpense = onDeleteExpense,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
 
                         FabOverlay(

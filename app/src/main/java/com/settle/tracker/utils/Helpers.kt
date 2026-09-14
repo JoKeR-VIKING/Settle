@@ -26,6 +26,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.settle.tracker.R
 import com.settle.tracker.scheme.ExpenseCategory
+import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.RecurrenceType
 import com.settle.tracker.scheme.UserScheme
 import java.text.NumberFormat
@@ -261,6 +262,18 @@ fun colorFromString(key: String): Color {
     val g = (hash shr 8 and 0xFF) / 255f
     val b = (hash and 0xFF) / 255f
     return Color(r, g, b, 1f)
+}
+
+fun List<ExpenseScheme>.filterBySearch(query: String): List<ExpenseScheme> {
+    val q = query.trim()
+    if (q.isEmpty()) return this
+
+    return filter { expense ->
+        expense.details.contains(q, ignoreCase = true) ||
+            expense.category.replace('_', ' ').contains(q, ignoreCase = true) ||
+            expense.paidBy.any { it.name.contains(q, ignoreCase = true) } ||
+            expense.splits.any { it.name.contains(q, ignoreCase = true) }
+    }
 }
 
 fun calculateEndAt(
