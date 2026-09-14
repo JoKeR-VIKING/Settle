@@ -33,6 +33,7 @@ import com.settle.tracker.components.analytics.personal.prepareMonthlyData
 import com.settle.tracker.components.chart.LineChart
 import com.settle.tracker.components.chart.ReferenceLineConfig
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.ui.theme.Success
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.toFullMonthName
 import kotlin.math.absoluteValue
@@ -149,7 +150,7 @@ fun MonthlySpendingChart(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.TrendingDown,
                             contentDescription = "Trending Down",
-                            tint = MaterialTheme.colorScheme.surfaceBright
+                            tint = Success
                         )
                     } else {
                         Icon(
@@ -166,7 +167,7 @@ fun MonthlySpendingChart(
                             withStyle(
                                 style = SpanStyle(
                                     color = (
-                                        if (percentageChange < 0) MaterialTheme.colorScheme.surfaceBright
+                                        if (percentageChange < 0) Success
                                         else MaterialTheme.colorScheme.error
                                         )
                                 )

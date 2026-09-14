@@ -61,7 +61,7 @@ fun GroupMemberPickerModal(
     }
 
     ModalBottomSheet(
-        modifier = Modifier.padding(16.dp),
+        modifier = Modifier.fillMaxWidth(),
         sheetState = sheetState,
         onDismissRequest = onDismissRequest
     ) {
@@ -117,6 +117,7 @@ fun GroupMemberPickerModal(
                 modifier = Modifier.fillMaxWidth(),
                 groupMembers = groupMembers,
                 splits = payers,
+                totalAmount = amount,
                 onSplitsChange = {
                     payers = it
                 }

@@ -31,8 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +42,7 @@ import com.settle.tracker.AppDatabase
 import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.ui.theme.Success
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
 import com.settle.tracker.utils.getExpenseCategoryColor
@@ -88,8 +87,8 @@ fun ExpenseRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 5.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
             .combinedClickable(
                 onClick = {
@@ -100,100 +99,89 @@ fun ExpenseRow(
                         expense.id.ifBlank { smsExpenseId }
                     )
                 },
-                onLongClick = {
-                    showDeleteDialog = true
-                }
+                onLongClick = { showDeleteDialog = true }
             )
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Category avatar with tint halo
+        // Category icon — solid tinted background
         Box(
             modifier = Modifier
-                .size(46.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            categoryColor,
-                            categoryColor.copy(alpha = 0.75f)
-                        )
-                    )
-                ),
+                .background(categoryColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = getExpenseCategoryIcon(expense.category),
                 contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                tint = categoryColor,
+                modifier = Modifier.size(22.dp)
             )
         }
 
-        // Title + subtext
+        // Title + meta row
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Text(
                 text = expense.details.ifBlank { "Untitled expense" },
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Text(
                     text = formatTimestamp(expense.timestamp),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Box(
-                    Modifier
-                        .size(3.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-                )
-                Text(
-                    text = expenseSubText(expense),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
+                if (!isSettlement) {
+                    val subText = expenseSubText(expense)
+                    if (subText.isNotBlank()) {
+                        Separator()
+                        Text(
+                            text = subText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                }
             }
         }
 
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(2.dp))
 
-        // Amount + optional pill
+        // Amount + lent/owe pill
         Column(
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             val isSplitExpense = expense.paidBy.isNotEmpty()
             val showNotInvolved = isSplitExpense && balanceAmount.absoluteValue == 0.0 && !isInvolved
 
             Text(
                 text = when {
-                    showNotInvolved -> "Not involved"
+                    showNotInvolved -> "—"
                     isSplitExpense  -> formatCurrency(balanceAmount.absoluteValue)
                     else            -> formatCurrency(expense.amount)
                 },
-                style = if (showNotInvolved) MaterialTheme.typography.labelSmall
-                else MaterialTheme.typography.titleMedium,
+                style = if (showNotInvolved) MaterialTheme.typography.labelMedium
+                        else MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.2.sp,
                 maxLines = 1,
                 color = when {
-                    !isSplitExpense -> MaterialTheme.colorScheme.onSurface
-                    balanceAmount > 0.0 -> MaterialTheme.colorScheme.surfaceBright
+                    !isSplitExpense  -> MaterialTheme.colorScheme.onSurface
+                    balanceAmount > 0.0 -> Success
                     balanceAmount < 0.0 -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
@@ -207,23 +195,21 @@ fun ExpenseRow(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
                         .background(
-                            if (lent) MaterialTheme.colorScheme.surfaceBright.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.error.copy(alpha = 0.13f)
+                            if (lent) Success.copy(alpha = 0.12f)
+                            else MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
                         )
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Icon(
                         imageVector = if (lent) Icons.Filled.CallReceived else Icons.Filled.CallMade,
                         contentDescription = null,
-                        modifier = Modifier.size(10.dp),
-                        tint = if (lent) MaterialTheme.colorScheme.surfaceBright
-                        else MaterialTheme.colorScheme.error
+                        modifier = Modifier.size(9.dp),
+                        tint = if (lent) Success else MaterialTheme.colorScheme.error
                     )
                     Text(
-                        text = if (lent) "you lent" else "you owe",
+                        text = if (lent) "lent" else "owe",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = if (lent) MaterialTheme.colorScheme.surfaceBright
-                        else MaterialTheme.colorScheme.error,
+                        color = if (lent) Success else MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -250,6 +236,16 @@ fun ExpenseRow(
             toggleAlert = { showDeleteDialog = false }
         )
     }
+}
+
+@Composable
+private fun Separator() {
+    Box(
+        Modifier
+            .size(3.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+    )
 }
 
 private fun expenseSubText(expense: ExpenseScheme): String = when {

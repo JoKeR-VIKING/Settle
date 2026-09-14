@@ -40,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -56,8 +55,6 @@ import com.settle.tracker.components.account.ProfileHeader
 import com.settle.tracker.components.account.UpiIdField
 import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.ui.animations.bounceClickable
-import com.settle.tracker.ui.theme.BrandBlue
-import com.settle.tracker.ui.theme.BrandTeal
 import com.settle.tracker.utils.LocalThemeState
 import com.settle.tracker.utils.SettleLinks
 import com.settle.tracker.utils.SettlePrefs
@@ -136,8 +133,8 @@ fun AccountScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 20.dp)
-                .padding(top = 20.dp)
+                .padding(horizontal = 16.dp)
+                .padding(top = 16.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -278,13 +275,8 @@ private fun ThemeSelectorCard(
                         .weight(1f)
                         .clip(RoundedCornerShape(11.dp))
                         .background(
-                            if (active) Brush.horizontalGradient(listOf(BrandTeal, BrandBlue))
-                            else Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.surfaceVariant,
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            )
+                            if (active) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
                         )
                         .clickable { onSelect(mode) }
                         .padding(vertical = 10.dp, horizontal = 6.dp),

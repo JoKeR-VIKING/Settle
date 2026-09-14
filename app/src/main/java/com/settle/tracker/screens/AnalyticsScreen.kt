@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.firestore
+import com.settle.tracker.components.analytics.combined.CombinedAnalytics
 import com.settle.tracker.components.analytics.groups.GroupAnalytics
 import com.settle.tracker.components.analytics.personal.PersonalAnalytics
 import com.settle.tracker.components.common.CoachMarkOverlay
@@ -100,6 +101,7 @@ fun AnalyticsScreen(currentUser: FirebaseUser) {
                 when (selectedSection) {
                     SideBarItems.PERSONAL -> PersonalAnalytics()
                     SideBarItems.GROUPS -> GroupAnalytics()
+                    SideBarItems.COMBINED -> CombinedAnalytics()
                 }
 
                 CoachMarkOverlay(

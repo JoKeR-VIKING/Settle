@@ -77,7 +77,7 @@ fun BarChart(
     val maxValue = bars.maxOf { it.barValues.sum() }.coerceAtLeast(1f)
     val progress = remember { Animatable(0f) }
 
-    val paddingLeft = 40f
+    val paddingLeft = 80f
     val paddingBottom = 20f
     val xStartOffset = 80f
     val dashedEffect = PathEffect.dashPathEffect(

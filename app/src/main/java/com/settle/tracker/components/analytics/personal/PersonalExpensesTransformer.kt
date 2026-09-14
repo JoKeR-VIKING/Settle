@@ -195,6 +195,14 @@ fun getHighestCategorySpend(
         .sortedByDescending { it.percentageIncrease }
 }
 
+fun prepareUserGroupExpenses(
+    expenses: List<ExpenseScheme>,
+    userId: String
+): List<ExpenseScheme> = expenses.mapNotNull { expense ->
+    val userShare = expense.splits.firstOrNull { it.id == userId }?.amount ?: 0.0
+    if (userShare <= 0.0) null else expense.copy(amount = userShare)
+}
+
 fun getHighestSpendingWeekday(
     dailyData: List<DailyPoints>
 ): Pair<String, Double>? {

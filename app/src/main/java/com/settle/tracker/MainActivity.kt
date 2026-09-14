@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.core.app.NotificationManagerCompat
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.tween
@@ -100,6 +101,13 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         updateIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Clear any delivered notifications (SMS expense / settlement reminders)
+        // once the user is actually in the app.
+        NotificationManagerCompat.from(this).cancelAll()
     }
 
     private fun updateIntent(intent: Intent) {

@@ -18,14 +18,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -42,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,8 +66,9 @@ import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.ui.animations.bounceClickable
-import com.settle.tracker.ui.theme.BrandBlue
 import com.settle.tracker.ui.theme.BrandTeal
+import com.settle.tracker.ui.theme.BrandBlue
+import com.settle.tracker.ui.theme.Success
 import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.calculateNetBalances
 import com.settle.tracker.utils.formatCurrency
@@ -72,7 +79,8 @@ const val MAX_GROUP_NAME_CHARS = 20
 
 data class GroupWithBalance(
     val group: GroupScheme,
-    val balance: Double
+    val balance: Double,
+    val lastActivityAt: Long = 0L
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +106,7 @@ fun GroupsScreen(
 
     var userScheme by remember { mutableStateOf<UserScheme?>(null) }
     var showCoach by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     fun createGroup() {
         isSubmitting = true
@@ -144,9 +153,11 @@ fun GroupsScreen(
                             if (e != null) { Log.e("Firestore", "${e.message}"); isFetching = false; return@addSnapshotListener }
                             val expenses = expenseSnap?.toObjects(ExpenseScheme::class.java) ?: emptyList()
                             val myBalance = calculateNetBalances(expenses)
+                            val lastExpenseCreated = expenses.maxOfOrNull { it.createdAt } ?: 0L
                             groupsWithBalance = groupsWithBalance + (group.id to GroupWithBalance(
                                 group = group,
-                                balance = myBalance[currentUser.uid] ?: 0.0
+                                balance = myBalance[currentUser.uid] ?: 0.0,
+                                lastActivityAt = maxOf(group.createdAt, lastExpenseCreated)
                             ))
                         }
                     groupListener[group.id] = registration
@@ -179,14 +190,39 @@ fun GroupsScreen(
                 }
                 groupsWithBalance.isEmpty() -> EmptyGroupsState()
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 32.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        val sortedGroups = groupsWithBalance.values.sortedByDescending { it.group.createdAt }
-                        items(sortedGroups, key = { it.group.id }) { gb ->
-                            GroupRowCard(gb = gb, onClick = { onOpenGroup(gb.group.id) })
+                    if (groupsWithBalance.size > 3) {
+                        GroupSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it }
+                        )
+                    }
+
+                    val sortedGroups = groupsWithBalance.values
+                        .sortedByDescending { it.lastActivityAt }
+                        .filter {
+                            searchQuery.isBlank() ||
+                                it.group.groupName.contains(searchQuery, ignoreCase = true)
+                        }
+
+                    if (sortedGroups.isEmpty()) {
+                        Text(
+                            text = "No groups matching \"$searchQuery\".",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp, vertical = 40.dp)
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 32.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(sortedGroups, key = { it.group.id }) { gb ->
+                                GroupRowCard(gb = gb, onClick = { onOpenGroup(gb.group.id) })
+                            }
                         }
                     }
                 }
@@ -240,32 +276,69 @@ private fun GroupsHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = "Groups",
-            style = MaterialTheme.typography.displayMedium,
-            fontWeight = FontWeight.ExtraBold
+            style = MaterialTheme.typography.headlineMedium
         )
         Box(
             modifier = Modifier
-                .size(38.dp)
+                .size(36.dp)
                 .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(listOf(BrandTeal, BrandBlue))
-                ),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 Icons.Filled.GroupAdd,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(20.dp)
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(18.dp)
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text("Search groups...", style = MaterialTheme.typography.labelLarge)
+        },
+        leadingIcon = {
+            Icon(
+                Icons.Filled.Search,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+        },
+        trailingIcon = if (query.isNotEmpty()) {
+            {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Clear",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        } else null,
+        shape = RoundedCornerShape(16.dp),
+        singleLine = true,
+        textStyle = MaterialTheme.typography.labelLarge,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+    )
 }
 
 @Composable
@@ -274,25 +347,18 @@ private fun AddGroupCard(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        BrandTeal.copy(alpha = 0.12f),
-                        BrandBlue.copy(alpha = 0.12f)
-                    )
-                )
-            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
             .bounceClickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(36.dp)
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(BrandTeal, BrandBlue))),
+                .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -304,12 +370,13 @@ private fun AddGroupCard(onClick: () -> Unit) {
         }
         Column(Modifier.weight(1f)) {
             Text(
-                "Start a new group",
+                "New group",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                "Roommates, trips, parties… anything.",
+                "Trips, roommates, dinners…",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -372,7 +439,7 @@ private fun GroupRowCard(
             letterSpacing = 0.3.sp,
             maxLines = 1,
             color = when {
-                gb.balance > 0.0 -> MaterialTheme.colorScheme.surfaceBright
+                gb.balance > 0.0 -> Success
                 gb.balance < 0.0 -> MaterialTheme.colorScheme.error
                 else             -> MaterialTheme.colorScheme.onSurfaceVariant
             }

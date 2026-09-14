@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -27,6 +30,7 @@ import coil.compose.AsyncImage
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.settle.tracker.scheme.UserScheme
+import com.settle.tracker.ui.theme.Success
 import com.settle.tracker.utils.formatCurrency
 
 @Composable
@@ -37,7 +41,8 @@ fun BalanceCard(
     showSettle: Boolean,
     openUpiApp: () -> Unit,
     setPendingSettlement: () -> Unit,
-    onShowConfirmDialog: (Boolean) -> Unit
+    onShowConfirmDialog: (Boolean) -> Unit,
+    onShareReminder: (() -> Unit)? = null
 ) {
     val currentUser = Firebase.auth.currentUser
 
@@ -104,11 +109,11 @@ fun BalanceCard(
                             ),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelLarge,
-                        color = (
-                            if (receiverScheme.id == currentUser?.uid) MaterialTheme.colorScheme.surfaceBright
-                            else if (payerScheme.id == currentUser?.uid) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        color = when {
+                            receiverScheme.id == currentUser?.uid -> Success
+                            payerScheme.id == currentUser?.uid    -> MaterialTheme.colorScheme.error
+                            else                                  -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
@@ -138,25 +143,44 @@ fun BalanceCard(
         }
 
         if (showSettle) {
-            OutlinedButton(
-                modifier = Modifier
-                    .fillMaxWidth(0.4f),
-                border = BorderStroke(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary
-                ),
-                onClick = {
-                    setPendingSettlement()
-                    openUpiApp()
-
-                    onShowConfirmDialog(true)
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
             ) {
-                Text(
-                    text = "Settle",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary),
+                    onClick = {
+                        setPendingSettlement()
+                        openUpiApp()
+                        onShowConfirmDialog(true)
+                    }
+                ) {
+                    Text(
+                        text = "Settle",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (onShareReminder != null) {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.outline),
+                        onClick = onShareReminder
+                    ) {
+                        Icon(
+                            Icons.Filled.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "  Remind",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
         }
     }

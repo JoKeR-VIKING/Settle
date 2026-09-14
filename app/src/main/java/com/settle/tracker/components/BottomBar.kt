@@ -31,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,8 +39,6 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.settle.tracker.ui.animations.bounceClickable
-import com.settle.tracker.ui.theme.BrandBlue
-import com.settle.tracker.ui.theme.BrandTeal
 
 sealed class BottomBarScreen(val route: String, val title: String, val icon: ImageVector) {
     object Expenses  : BottomBarScreen("expenses",  "Expenses",  Icons.Filled.PieChart)
@@ -119,15 +116,8 @@ private fun BottomBarItem(
             .height(48.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(
-                if (selected)
-                    Brush.horizontalGradient(listOf(BrandTeal, BrandBlue))
-                else
-                    Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.surface
-                        )
-                    )
+                if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surface
             )
             .bounceClickable(onClick = onClick),
         contentAlignment = Alignment.Center

@@ -411,6 +411,7 @@ fun SplitModeField(
             UnequalSplitMemberList(
                 groupMembers = groupMembers,
                 splits = splits,
+                totalAmount = totalAmount,
                 onSplitsChange = { updatedSplits ->
                     onSplitsChange(
                         updatedSplits,

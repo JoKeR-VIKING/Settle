@@ -101,6 +101,7 @@ fun AddEditExpenseScreen(
     val datePickerSheetState = rememberModalBottomSheetState()
     val categoryPickerSheetState = rememberModalBottomSheetState()
     val paidFromSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val groupPaymentFromSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant()
             .toEpochMilli(),
@@ -129,6 +130,7 @@ fun AddEditExpenseScreen(
     var showDatePickerModal by remember { mutableStateOf(false) }
     var showCategoryPickerModal by remember { mutableStateOf(false) }
     var showPaidFromModal by remember { mutableStateOf(false) }
+    var showGroupPaymentFromModal by remember { mutableStateOf(false) }
     var isSubmittingExpense by remember { mutableStateOf(false) }
     var isFetchingExpense by remember { mutableStateOf(false) }
     var showSuccess by remember { mutableStateOf(false) }
@@ -163,7 +165,6 @@ fun AddEditExpenseScreen(
             )
 
             if (paidBy.isNotEmpty()) {
-                expenseMap.remove("paidFrom")
                 expenseMap["paidBy"] = paidBy
                 expenseMap["splitMode"] = splitMode
                 expenseMap["splits"] = splits
@@ -488,6 +489,20 @@ fun AddEditExpenseScreen(
 
                     if (groupId != null) {
                         item {
+                            PaymentMethodField(
+                                isGroupExpense = false,
+                                paidFrom = paidFrom,
+                                paidBy = emptyList(),
+                                onFocus = {
+                                    showGroupPaymentFromModal = true
+                                    focusManager.clearFocus()
+                                }
+                            )
+                        }
+                    }
+
+                    if (groupId != null) {
+                        item {
                             SplitModeField(
                                 groupData = groupData,
                                 selectedSplitMode = splitMode,
@@ -571,6 +586,16 @@ fun AddEditExpenseScreen(
                         }
                     )
                 }
+            }
+
+            if (showGroupPaymentFromModal) {
+                PaymentMethodPickerModal(
+                    sheetState = groupPaymentFromSheetState,
+                    onDismissRequest = { showGroupPaymentFromModal = false },
+                    previousPaymentMethods = previousPaymentMethods,
+                    initialPaidFrom = paidFrom,
+                    onPaymentMethodSelected = { paidFrom = it }
+                )
             }
         }
 

@@ -37,6 +37,7 @@ import com.settle.tracker.components.chart.BarChart
 import com.settle.tracker.components.chart.BarData
 import com.settle.tracker.components.chart.ReferenceLineConfig
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.ui.theme.Success
 import com.settle.tracker.utils.formatCurrency
 
 enum class DailyFilterList(
@@ -213,7 +214,7 @@ fun DailySpendingChart(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.TrendingDown,
                         contentDescription = "Spent Today",
-                        tint = MaterialTheme.colorScheme.surfaceBright
+                        tint = Success
                     )
 
                     Text(
@@ -222,7 +223,7 @@ fun DailySpendingChart(
 
                             withStyle(
                                 style = SpanStyle(
-                                    color = MaterialTheme.colorScheme.surfaceBright
+                                    color = Success
                                 )
                             ) {
                                 append("least")
@@ -232,7 +233,7 @@ fun DailySpendingChart(
 
                             withStyle(
                                 style = SpanStyle(
-                                    color = MaterialTheme.colorScheme.surfaceBright
+                                    color = Success
                                 )
                             ) {
                                 append("${lowestSpendingDay.first}s")

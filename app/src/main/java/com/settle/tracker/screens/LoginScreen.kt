@@ -3,10 +3,6 @@ package com.settle.tracker.screens
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -39,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -52,11 +47,8 @@ import com.google.firebase.auth.FirebaseUser
 import com.settle.tracker.GoogleAuthClient
 import com.settle.tracker.R
 import com.settle.tracker.ui.animations.CoinLoader
-import com.settle.tracker.ui.animations.breathing
 import com.settle.tracker.ui.animations.bounceClickable
-import com.settle.tracker.ui.theme.BrandBlue
 import com.settle.tracker.ui.theme.BrandBlueDeep
-import com.settle.tracker.ui.theme.BrandTeal
 import com.settle.tracker.ui.theme.BrandTealDeep
 import com.settle.tracker.utils.SettleLinks
 import com.settle.tracker.utils.openUrl
@@ -75,51 +67,11 @@ fun LoginScreen(
 
     LaunchedEffect(Unit) { contentVisible = true }
 
-    // Animated blob background: slow drifting color washes using brand palette
-    val transition = rememberInfiniteTransition(label = "bg")
-    val t by transition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween(7000, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse
-        ),
-        label = "bg-t"
-    )
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Brand gradient wash
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            BrandTeal.copy(alpha = 0.30f + 0.10f * t),
-                            Color.Transparent
-                        ),
-                        center = Offset(400f + t * 200f, 400f),
-                        radius = 900f
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            BrandBlue.copy(alpha = 0.25f + 0.10f * (1 - t)),
-                            Color.Transparent
-                        ),
-                        center = Offset(1000f - t * 300f, 1500f),
-                        radius = 1000f
-                    )
-                )
-        )
 
         Column(
             modifier = Modifier
@@ -143,9 +95,8 @@ fun LoginScreen(
                         painter = painterResource(id = R.drawable.logo),
                         contentDescription = "Settle Logo",
                         modifier = Modifier
-                            .size(140.dp)
-                            .clip(RoundedCornerShape(percent = 30))
-                            .breathing(minScale = 0.97f, maxScale = 1.05f),
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(percent = 28)),
                         contentScale = ContentScale.Crop
                     )
 
@@ -154,16 +105,14 @@ fun LoginScreen(
                     Text(
                         "Settle",
                         style = MaterialTheme.typography.headlineLarge,
-                        letterSpacing = 2.sp,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.ExtraBold
+                        color = MaterialTheme.colorScheme.onBackground
                     )
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     Text(
                         "Split smart. Settle fast.",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

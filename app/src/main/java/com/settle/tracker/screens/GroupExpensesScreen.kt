@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +40,12 @@ import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.FabMenu
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.common.FabOverlay
+import com.settle.tracker.components.expenses.ExpenseFilterSheet
+import com.settle.tracker.components.expenses.ExpenseFilters
 import com.settle.tracker.components.expenses.ExpenseTable
+import com.settle.tracker.components.expenses.NoSearchResults
+import com.settle.tracker.components.expenses.SearchFilterBar
+import com.settle.tracker.components.expenses.filterBySearchAndFilters
 import com.settle.tracker.components.expenses.RecurringExpensesList
 import com.settle.tracker.components.groups.BalanceList
 import com.settle.tracker.components.groups.FullScreenDialog
@@ -53,6 +60,7 @@ enum class GroupTab {
     BALANCES
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupExpensesScreen(
     groupId: String,
@@ -71,6 +79,15 @@ fun GroupExpensesScreen(
 
     var expenses by remember { mutableStateOf<List<ExpenseScheme>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var activeFilters by remember { mutableStateOf(ExpenseFilters()) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+
+    val filterSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val filteredExpenses = remember(expenses, searchQuery, activeFilters) {
+        expenses.filterBySearchAndFilters(searchQuery, activeFilters)
+    }
 
     val onDeleteExpense: (String) -> Unit = { expenseId ->
         isFetching = true
@@ -157,6 +174,7 @@ fun GroupExpensesScreen(
                             details = doc.getString("details") ?: "",
                             amount = doc.getDouble("amount") ?: 0.0,
                             category = doc.getString("category") ?: "",
+                            paidFrom = doc.getString("paidFrom") ?: "",
                             paidBy = paidBy,
                             splits = splits,
                             createdAt = doc.getLong("createdAt") ?: 0L
@@ -232,10 +250,11 @@ fun GroupExpensesScreen(
                                 onEditExpense = onEditExpense
                             )
                         },
-                    ) {
+                    ) { innerPadding ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .padding(innerPadding)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
@@ -243,12 +262,27 @@ fun GroupExpensesScreen(
                                     focusManager.clearFocus()
                                 },
                         ) {
-                            ExpenseTable(
-                                expenses = expenses,
-                                onEditExpense = onEditExpense,
-                                onDeleteExpense = onDeleteExpense,
-                                modifier = Modifier
-                            )
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                SearchFilterBar(
+                                    query = searchQuery,
+                                    onQueryChange = { searchQuery = it },
+                                    hasActiveFilters = activeFilters.isActive,
+                                    onFilterClick = { showFilterSheet = true }
+                                )
+
+                                when {
+                                    expenses.isEmpty() || filteredExpenses.isNotEmpty() -> ExpenseTable(
+                                        expenses = filteredExpenses,
+                                        onEditExpense = onEditExpense,
+                                        onDeleteExpense = onDeleteExpense,
+                                        modifier = Modifier
+                                    )
+                                    else -> NoSearchResults(
+                                        query = searchQuery,
+                                        hasFilters = activeFilters.isActive
+                                    )
+                                }
+                            }
                         }
 
                         FabOverlay(
@@ -267,6 +301,15 @@ fun GroupExpensesScreen(
                         expenses = expenses
                     )
                 }
+            }
+
+            if (showFilterSheet) {
+                ExpenseFilterSheet(
+                    sheetState = filterSheetState,
+                    filters = activeFilters,
+                    onFiltersChanged = { activeFilters = it },
+                    onDismiss = { showFilterSheet = false }
+                )
             }
 
             if (showGroupDialog) {

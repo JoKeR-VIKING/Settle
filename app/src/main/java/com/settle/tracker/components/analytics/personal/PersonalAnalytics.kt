@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.QueryStats
@@ -26,6 +27,7 @@ import com.settle.tracker.components.analytics.CategorizedSpendingChart
 import com.settle.tracker.components.analytics.ChartCard
 import com.settle.tracker.components.analytics.DailySpendingChart
 import com.settle.tracker.components.analytics.MonthlySpendingChart
+import com.settle.tracker.components.analytics.PaymentMethodChart
 import com.settle.tracker.components.common.EmptyState
 import com.settle.tracker.scheme.ExpenseScheme
 
@@ -87,6 +89,13 @@ fun PersonalAnalytics() {
                 subtitle = "Where your money goes",
                 icon = Icons.Filled.Category
             ) { CategorizedSpendingChart(expenses) }
+        }
+        item {
+            ChartCard(
+                title = "Spending by Source",
+                subtitle = "Which bank or wallet you use most",
+                icon = Icons.Filled.AccountBalanceWallet
+            ) { PaymentMethodChart(expenses) }
         }
     }
 }

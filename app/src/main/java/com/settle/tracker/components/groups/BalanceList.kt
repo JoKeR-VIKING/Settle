@@ -2,7 +2,7 @@ package com.settle.tracker.components.groups
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import com.settle.tracker.utils.formatCurrency
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -52,6 +52,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 import kotlin.math.min
+import androidx.core.net.toUri
 
 const val EPSILON_VALUE = 0.01
 
@@ -175,6 +176,33 @@ fun BalanceList(
             }
     }
 
+    fun shareReminder(
+        payerName: String,
+        amount: Double,
+        groupName: String,
+        myUpiId: String
+    ) {
+        val message = buildString {
+            append("Hey $payerName! 👋\n")
+            append("Just a reminder — you owe ${formatCurrency(amount)} for $groupName.\n")
+            if (myUpiId.isNotBlank()) append("You can settle via UPI: $myUpiId\n")
+            append("\n— Sent from Settle")
+        }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+            setPackage("com.whatsapp")
+        }
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, message)
+            }, "Share via"))
+        }
+    }
+
     fun openUpiApp(
         context: Context,
         receiverScheme: UserScheme,
@@ -182,14 +210,12 @@ fun BalanceList(
     ) {
         if (receiverScheme.upiId.isBlank() || receiverScheme.id == currentUser?.uid) return
 
-        val uri = Uri.parse(
-            "upi://pay" +
-                "?pa=${receiverScheme.upiId}" +
-                "&am=${amount}" +
-                "&cu=INR" +
-                "&tn=Settlement for ${groupData.groupName}" +
-                "&mode=02"
-        )
+        val uri = ("upi://pay" +
+            "?pa=${receiverScheme.upiId}" +
+            "&am=${amount}" +
+            "&cu=INR" +
+            "&tn=Settlement for ${groupData.groupName}" +
+            "&mode=02").toUri()
 
         val intent = Intent(Intent.ACTION_VIEW, uri)
         intent.addCategory(Intent.CATEGORY_BROWSABLE)
@@ -261,15 +287,19 @@ fun BalanceList(
                                 )
                             },
                             setPendingSettlement = {
-                                pendingSettlement = Triple(
-                                    payerScheme,
-                                    receiverScheme,
-                                    amount
-                                )
+                                pendingSettlement = Triple(payerScheme, receiverScheme, amount)
                             },
-                            onShowConfirmDialog = {
-                                showConfirmDialog = it
-                            }
+                            onShowConfirmDialog = { showConfirmDialog = it },
+                            onShareReminder = if (settlement.to == currentUser?.uid) {
+                                {
+                                    shareReminder(
+                                        payerName = payerScheme.name,
+                                        amount = amount,
+                                        groupName = groupData.groupName,
+                                        myUpiId = groupMemberMap[currentUser.uid]?.upiId ?: ""
+                                    )
+                                }
+                            } else null
                         )
                     }
                 }

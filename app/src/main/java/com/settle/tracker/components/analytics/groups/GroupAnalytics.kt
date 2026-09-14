@@ -8,10 +8,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -32,8 +34,10 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.settle.tracker.components.analytics.CategorizedSpendingChart
 import com.settle.tracker.components.analytics.ChartCard
+import com.settle.tracker.components.analytics.MemberContributionChart
 import com.settle.tracker.components.analytics.MonthlySpendingChart
-import com.settle.tracker.components.analytics.TopSpenders
+import com.settle.tracker.components.analytics.PaymentMethodChart
+import com.settle.tracker.components.analytics.personal.prepareUserGroupExpenses
 import com.settle.tracker.components.common.EmptyState
 import com.settle.tracker.scheme.ExpenseScheme
 import com.settle.tracker.scheme.GroupScheme
@@ -126,17 +130,27 @@ fun GroupAnalytics() {
 
         item {
             ChartCard(
-                title = "Monthly Spends",
+                title = "Group Monthly Spends",
                 subtitle = selectedGroup?.groupName ?: "",
                 icon = Icons.Filled.CalendarMonth
             ) { MonthlySpendingChart(expenses) }
         }
         item {
+            val myExpenses = remember(expenses, currentUser?.uid) {
+                prepareUserGroupExpenses(expenses, currentUser?.uid ?: "")
+            }
             ChartCard(
-                title = "Top Spenders",
-                subtitle = "Who paid the most",
-                icon = Icons.Filled.EmojiEvents
-            ) { TopSpenders(expenses) }
+                title = "My Monthly Spend",
+                subtitle = "Your share in ${selectedGroup?.groupName ?: "this group"}",
+                icon = Icons.Filled.Person
+            ) { MonthlySpendingChart(myExpenses) }
+        }
+        item {
+            ChartCard(
+                title = "Member Contributions",
+                subtitle = "Who fronted the most",
+                icon = Icons.Filled.Leaderboard
+            ) { MemberContributionChart(expenses) }
         }
         item {
             ChartCard(
@@ -144,6 +158,13 @@ fun GroupAnalytics() {
                 subtitle = "Group-wide breakdown",
                 icon = Icons.Filled.Category
             ) { CategorizedSpendingChart(expenses) }
+        }
+        item {
+            ChartCard(
+                title = "Payment Methods",
+                subtitle = "Spending by account / card",
+                icon = Icons.Filled.AccountBalanceWallet
+            ) { PaymentMethodChart(expenses) }
         }
     }
 }
