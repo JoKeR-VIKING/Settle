@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -37,6 +38,10 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.settle.tracker.components.BottomBar
 import com.settle.tracker.components.BottomBarScreen
+import com.settle.tracker.components.ForceUpdateOverlay
+import com.settle.tracker.components.UpdateBanner
+import com.settle.tracker.utils.UpdateStatus
+import com.settle.tracker.utils.checkForUpdate
 import com.settle.tracker.screens.AccountScreen
 import com.settle.tracker.screens.AddEditExpenseScreen
 import com.settle.tracker.screens.AnalyticsScreen
@@ -153,6 +158,13 @@ private fun AppContent(
 
     val db = Firebase.firestore
     val prefs = remember { SettlePrefs(activity.applicationContext) }
+
+    var updateStatus by remember { mutableStateOf<UpdateStatus>(UpdateStatus.UpToDate) }
+    var showUpdateBanner by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        updateStatus = checkForUpdate(BuildConfig.VERSION_CODE)
+    }
 
     // Initial permission sequence: Notifications -> Read SMS -> Receive SMS (polite ask)
     val receiveSmsPermission = rememberPermissionRequester(
@@ -396,8 +408,19 @@ private fun AppContent(
                         AnalyticsScreen(currentUser = currentUser!!)
                     }
                 }
+
+                UpdateBanner(
+                    visible = updateStatus is UpdateStatus.OptionalUpdate && showUpdateBanner,
+                    onDismiss = { showUpdateBanner = false },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
         } // CompositionLocalProvider
+
+        val forceStatus = updateStatus
+        if (forceStatus is UpdateStatus.ForceUpdate) {
+            ForceUpdateOverlay()
+        }
     }
 }

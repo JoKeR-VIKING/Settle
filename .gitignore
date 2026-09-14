@@ -33,7 +33,6 @@ Thumbs.db
 # Firebase
 google-services.json
 app/src/prod/google-services.json
-app/src/
 
 # Fastlane
 fastlane/report.xml
