@@ -1,6 +1,11 @@
 package com.settle.tracker.screens
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,12 +24,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -95,6 +103,7 @@ fun ExpensesScreen(
     var expenses by remember { mutableStateOf<List<ExpenseScheme>>(emptyList()) }
     var isFirstLoad by remember { mutableStateOf(true) }
     var expanded by remember { mutableStateOf(false) }
+    var heroExpanded by remember { mutableStateOf(prefs.readHeroExpanded()) }
     var selectedTab by remember { mutableStateOf(DashboardType.EXPENSES) }
 
     var userScheme by remember { mutableStateOf<UserScheme?>(null) }
@@ -254,7 +263,12 @@ fun ExpensesScreen(
                 name = currentUser.displayName ?: "there",
                 personalThisMonth = totalThisMonth,
                 groupShareThisMonth = groupShareThisMonth,
-                totalsReady = !isFirstLoad && groupShareLoaded
+                totalsReady = !isFirstLoad && groupShareLoaded,
+                expanded = heroExpanded,
+                onToggleExpanded = {
+                    heroExpanded = !heroExpanded
+                    prefs.writeHeroExpanded(heroExpanded)
+                }
             )
 
             TabSwitcher(
@@ -341,7 +355,9 @@ private fun GreetingHero(
     name: String,
     personalThisMonth: Double,
     groupShareThisMonth: Double,
-    totalsReady: Boolean
+    totalsReady: Boolean,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit
 ) {
     val combinedTotal = personalThisMonth + groupShareThisMonth
     val cal = Calendar.getInstance()
@@ -356,13 +372,33 @@ private fun GreetingHero(
             .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.surface)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                enabled = totalsReady
+            ) { onToggleExpanded() }
             .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
-        Text(
-            text = "Hey, ${name.split(" ").first()} 👋",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Hey, ${name.split(" ").first()} 👋",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (totalsReady) {
+                IconButton(onClick = onToggleExpanded, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = if (expanded) "Collapse summary" else "Expand summary",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(10.dp))
         if (!totalsReady) {
             GreetingHeroSkeleton()
@@ -378,17 +414,25 @@ private fun GreetingHero(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(10.dp))
-            SpendSplitRow(
-                personalThisMonth = personalThisMonth,
-                groupShareThisMonth = groupShareThisMonth
-            )
-            if (combinedTotal > 0 && daysElapsed > 0) {
-                Spacer(Modifier.height(12.dp))
-                PaceWarningBanner(
-                    dailyRate = dailyRate,
-                    projectedMonthEnd = projectedMonthEnd
-                )
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Spacer(Modifier.height(10.dp))
+                    SpendSplitRow(
+                        personalThisMonth = personalThisMonth,
+                        groupShareThisMonth = groupShareThisMonth
+                    )
+                    if (combinedTotal > 0 && daysElapsed > 0) {
+                        Spacer(Modifier.height(12.dp))
+                        PaceWarningBanner(
+                            dailyRate = dailyRate,
+                            projectedMonthEnd = projectedMonthEnd
+                        )
+                    }
+                }
             }
         }
     }
