@@ -34,6 +34,9 @@ class SettlePrefs(context: Context) {
     }
     fun writeThemeMode(mode: ThemeMode) { sp.edit { putString("theme_mode", mode.name) } }
 
+    fun readHeroExpanded(): Boolean = sp.getBoolean("hero_expanded", true)
+    fun writeHeroExpanded(expanded: Boolean) { sp.edit { putBoolean("hero_expanded", expanded) } }
+
     companion object {
         const val TUTORIAL_EXPENSES = "tutorial_expenses"
         const val TUTORIAL_GROUPS = "tutorial_groups"
