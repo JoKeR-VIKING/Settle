@@ -1,0 +1,25 @@
+// Firestore security rules for the new `issueReports` collection.
+//
+// This file is NOT wired into firebase.json and is never auto-deployed —
+// there's no firestore.rules tracked in this repo, which means the
+// project's live rules (covering `users`, `groups`, etc.) live only in the
+// Firebase console today. Deploying a fresh firestore.rules from just this
+// snippet would replace those rules with an implicit "everything else
+// denied," breaking the rest of the app. Instead: open the existing rules
+// in Firebase console -> Firestore Database -> Rules, and merge this match
+// block in alongside what's already there.
+//
+// What it does:
+//   - Any signed-in user may create a report (and only their own: reporterId
+//     must equal their uid) — write-only, never read/update/delete their own
+//     or anyone else's report once submitted.
+//   - Only the admin account (matched by email, since custom claims aren't
+//     set up in this project) may read, list, or update reports — i.e. only
+//     the in-app Issue Reports dashboard.
+match /issueReports/{reportId} {
+  allow create: if request.auth != null
+    && request.resource.data.reporterId == request.auth.uid;
+  allow read, update: if request.auth != null
+    && request.auth.token.email == "prathamvasani1@gmail.com";
+  allow delete: if false;
+}

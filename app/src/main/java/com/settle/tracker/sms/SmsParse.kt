@@ -84,20 +84,48 @@ object SmsParse {
         body: String,
         receivedAt: Long,
     ): ExpenseScheme? {
-        if (SenderClassifier.classify(sender) == SenderTrust.UNTRUSTED) return null
+        val trust = SenderClassifier.classify(sender)
+        if (trust == SenderTrust.UNTRUSTED) {
+            SmsDiagnostics.record(sender, trust.name, classification = "-", outcome = "sender untrusted")
+            return null
+        }
 
-        val debit = SmsGrammar.classifySms(body) as? SmsGrammar.SmsClass.Debit ?: return null
+        val classified = SmsGrammar.classifySms(body)
+        val classificationName = classified::class.simpleName ?: "Unknown"
+        val debit = classified as? SmsGrammar.SmsClass.Debit
+        if (debit == null) {
+            SmsDiagnostics.record(sender, trust.name, classificationName, outcome = "not a completed debit")
+            return null
+        }
+
         val amount = debit.amountCents / 100.0
-        if (amount == 0.0) return null
+        if (amount == 0.0) {
+            SmsDiagnostics.record(sender, trust.name, classificationName, outcome = "zero amount")
+            return null
+        }
 
         val text = body.lowercase(Locale.getDefault())
+        val merchantFound = debit.merchantRaw != null
 
         val paidFrom = extractPaidFrom(text)
-        if (paidFrom == "") return null
+        if (paidFrom == "") {
+            SmsDiagnostics.record(
+                sender, trust.name, classificationName,
+                merchantFound = merchantFound, paidFromFound = false,
+                outcome = "no card/account/wallet match"
+            )
+            return null
+        }
 
         val id = generateFingerprint(sender, body, receivedAt)
         val details = extractDetails(sender, debit.merchantRaw, text)
         val category = extractCategory(text)
+
+        SmsDiagnostics.record(
+            sender, trust.name, classificationName,
+            merchantFound = merchantFound, paidFromFound = true,
+            outcome = "booked"
+        )
 
         return ExpenseScheme(
             id = id,
