@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PrivacyTip
@@ -59,6 +61,7 @@ import com.settle.tracker.utils.LocalThemeState
 import com.settle.tracker.utils.SettleLinks
 import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.ThemeMode
+import com.settle.tracker.utils.isAdminUser
 import com.settle.tracker.utils.openUrl
 import kotlinx.coroutines.launch
 
@@ -66,6 +69,8 @@ import kotlinx.coroutines.launch
 fun AccountScreen(
     googleAuthClient: GoogleAuthClient,
     onLogoutSuccess: () -> Unit,
+    onReportIssue: () -> Unit = {},
+    onOpenIssueReports: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -199,6 +204,24 @@ fun AccountScreen(
                         ).show()
                     }
                 )
+
+                ActionRow(
+                    icon = Icons.Filled.BugReport,
+                    title = "Report Issue",
+                    subtitle = "Something not working? Let us know",
+                    onClick = onReportIssue
+                )
+
+                if (isAdminUser(user?.email)) {
+                    SectionLabel("Admin")
+
+                    ActionRow(
+                        icon = Icons.Filled.AdminPanelSettings,
+                        title = "Issue Reports",
+                        subtitle = "View reports submitted by users",
+                        onClick = onOpenIssueReports
+                    )
+                }
 
                 Spacer(Modifier.height(8.dp))
 

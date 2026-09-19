@@ -49,8 +49,10 @@ import com.settle.tracker.screens.AnalyticsScreen
 import com.settle.tracker.screens.ExpensesScreen
 import com.settle.tracker.screens.GroupExpensesScreen
 import com.settle.tracker.screens.GroupsScreen
+import com.settle.tracker.screens.IssueReportsScreen
 import com.settle.tracker.screens.LoginScreen
 import com.settle.tracker.screens.PhoneVerificationScreen
+import com.settle.tracker.screens.ReportIssueScreen
 import com.settle.tracker.ui.theme.SettleTheme
 import com.settle.tracker.utils.LocalThemeState
 import com.settle.tracker.utils.SettlePermission
@@ -90,6 +92,8 @@ sealed class Screen(val route: String) {
     }
 
     object Analytics : Screen("analytics")
+    object ReportIssue : Screen("report_issue")
+    object IssueReports : Screen("issue_reports")
 }
 
 class MainActivity : ComponentActivity() {
@@ -337,7 +341,24 @@ private fun AppContent(
                                     popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     launchSingleTop = true
                                 }
+                            },
+                            onReportIssue = {
+                                navController.navigate(Screen.ReportIssue.route) { launchSingleTop = true }
+                            },
+                            onOpenIssueReports = {
+                                navController.navigate(Screen.IssueReports.route) { launchSingleTop = true }
                             }
+                        )
+                    }
+                    composable(Screen.ReportIssue.route) {
+                        ReportIssueScreen(
+                            onBack = { navController.popBackStack() },
+                            currentUser = currentUser!!
+                        )
+                    }
+                    composable(Screen.IssueReports.route) {
+                        IssueReportsScreen(
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable(
