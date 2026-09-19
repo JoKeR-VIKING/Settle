@@ -8,8 +8,8 @@ import org.junit.Test
 class DeviceLogsTest {
     @Test
     fun redactsBearerTokens() {
-        val line = "D/Auth: refreshed Authorization: Bearer abc123.def456.ghi789"
-        assertFalse(redactLogLine(line).contains("abc123"))
+        val line = "D/Auth: refreshed Authorization: Bearer NOT-A-REAL-TOKEN-fixture-value"
+        assertFalse(redactLogLine(line).contains("fixture-value"))
     }
 
     @Test
