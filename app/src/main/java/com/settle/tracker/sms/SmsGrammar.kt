@@ -159,6 +159,10 @@ object SmsGrammar {
         ci("""\b(?:to|towards)\s+(?:VPA\s+)?([A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z][A-Za-z0-9.]*)"""),
         // Axis/ICICI "Info- UPI/P2M/123456/SWIGGY." / "Info: CITY GROCERS RETAIL."
         ci("""\bInfo\b\s*[:\-]\s*([^.;\n]+)"""),
+        // ICICI "Acct XX552 debited for Rs 370.00 on 19-Sep-26; Mangalam shoes
+        // credited." — the beneficiary is named directly before "credited",
+        // with no "at/to" preposition at all.
+        ci("""[;.,]\s*([A-Za-z][A-Za-z0-9 .&'-]{1,40}?)\s+credited\b"""),
         // "at AMAZON on …", "to SWIGGY Refno …" — must start with a letter so a
         // clock ("at 12:33:12") is never read as a shop.
         ci("""\b(?:at|to|towards)\s+([A-Za-z][A-Za-z0-9 .&'-]{1,40}?)(?=\s+(?:on|dated|ref|refno|upi|avl)\b|[.;,:(\n]|$)""")

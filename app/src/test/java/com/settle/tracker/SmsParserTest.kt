@@ -30,7 +30,9 @@ class SmsParserTest {
         "Important Update: HDFC Bank Card xx0971:\n" +
                 "Higher Rs. 1500000 Loan on Card at lower interest rate 0.84%. Check EMIs.\n" +
                 "https://hdfcbk.io/HDFCBK/s/XVwooJGg\n" +
-                "T&C"
+                "T&C",
+        "ICICI Bank Acct XX552 debited for Rs 370.00 on 19-Sep-26; Mangalam shoes credited. " +
+                "UPI:626236224713. Call 18002662 for dispute. SMS BLOCK 552 to 9215676766."
     )
 
     @Test
@@ -223,6 +225,23 @@ class SmsParserTest {
 
         expense?.let {
             assertEquals(expense.amount, 35.00, 0.01)
+        }
+    }
+
+    @Test
+    fun testIciciAcctNoPreposition() {
+        val expense = SmsParse.parse(
+            "AM-ICICI-S",
+            samples[8],
+            System.currentTimeMillis()
+        )
+
+        assertNotNull(expense)
+
+        expense?.let {
+            assertEquals(expense.details, "Mangalam shoes".uppercase())
+            assertEquals(expense.amount, 370.00, 0.01)
+            assertEquals(expense.paidFrom, "Bank A/C 552")
         }
     }
 

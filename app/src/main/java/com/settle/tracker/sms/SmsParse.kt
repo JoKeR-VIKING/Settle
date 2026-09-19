@@ -68,7 +68,7 @@ object SmsParse {
     private val detailsRegexTwo = Regex("""(?i)\b(on)\s+([^\s.\n]+)""")
     private val cardRegex = Regex("""(?i)(card|credit card).*?(?:xx|ending)?\s*(\d{4})""")
     private val amazonPayRegex = Regex("""(?i)\bapay\s+(wallet\s+)?balance\b""")
-    private val accountRegex = Regex("""(?i)(a/c|account).*?(\*+\d{4}|\d{4})""")
+    private val accountRegex = Regex("""(?i)\b(a/c|acct|account)\b.*?(\*+\d{3,6}|\d{3,6})""")
 
     /**
      * The classification, amount extraction, and merchant grammar below is
