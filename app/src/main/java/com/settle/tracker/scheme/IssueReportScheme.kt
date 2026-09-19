@@ -21,5 +21,7 @@ data class IssueReportScheme(
     val androidVersion: String = "",
     val deviceModel: String = "",
     val diagnostics: List<SmsDiagnosticEntry> = emptyList(),
+    val deviceLogs: String? = null,
+    val crashInfo: String? = null,
     val createdAt: Long = 0L
 )

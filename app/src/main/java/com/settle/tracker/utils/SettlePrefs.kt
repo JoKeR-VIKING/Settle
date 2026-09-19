@@ -37,6 +37,11 @@ class SettlePrefs(context: Context) {
     fun readHeroExpanded(): Boolean = sp.getBoolean("hero_expanded", true)
     fun writeHeroExpanded(expanded: Boolean) { sp.edit { putBoolean("hero_expanded", expanded) } }
 
+    /** The most recent uncaught exception's stack trace, if any is still pending a report. */
+    fun readLastCrash(): String? = sp.getString("last_crash", null)
+    fun writeLastCrash(trace: String) { sp.edit { putString("last_crash", trace) } }
+    fun clearLastCrash() { sp.edit { remove("last_crash") } }
+
     companion object {
         const val TUTORIAL_EXPENSES = "tutorial_expenses"
         const val TUTORIAL_GROUPS = "tutorial_groups"

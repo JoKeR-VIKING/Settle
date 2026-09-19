@@ -247,6 +247,33 @@ private fun IssueReportCard(
                     }
                 }
 
+                report.crashInfo?.let { crash ->
+                    Text(
+                        "Crash trace",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        crash,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                report.deviceLogs?.let { logs ->
+                    Text(
+                        "Device logs",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        logs,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 OutlinedButton(onClick = onToggleStatus) {
                     Text(if (isOpen) "Mark Resolved" else "Reopen")
                 }
