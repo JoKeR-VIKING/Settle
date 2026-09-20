@@ -10,5 +10,7 @@ data class ExpenseEntity(
     val details: String,
     val category: String,
     val paidFrom: String,
-    val timestamp: Long
+    val timestamp: Long,
+    /** The pattern that pre-filled this draft's details/category, if any — see SpendPatternEngine. */
+    val patternId: String? = null
 )
