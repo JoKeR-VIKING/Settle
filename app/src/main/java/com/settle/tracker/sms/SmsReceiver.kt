@@ -12,16 +12,24 @@ import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
 import com.settle.tracker.AppDatabase
 import com.settle.tracker.MainActivity
 import com.settle.tracker.R
 import com.settle.tracker.db.ExpenseEntity
+import com.settle.tracker.db.SpendPatternDao
+import com.settle.tracker.db.SpendPatternEntity
+import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.scheme.ExpenseSource
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.getExpenseCategoryLargeIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.UUID
 import kotlin.math.absoluteValue
 
 fun ExpenseScheme.toEntity(): ExpenseEntity = ExpenseEntity(
@@ -30,7 +38,8 @@ fun ExpenseScheme.toEntity(): ExpenseEntity = ExpenseEntity(
     details = details,
     category = category,
     paidFrom = paidFrom,
-    timestamp = timestamp
+    timestamp = timestamp,
+    patternId = patternId
 )
 
 const val SMS_CHANNEL_ID = "sms_expense_channel"
@@ -85,55 +94,170 @@ class SmsReceiver : BroadcastReceiver() {
 
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         val db = AppDatabase.getInstance(context)
+        val currentUserId = Firebase.auth.currentUser?.uid
 
         messages.forEach { sms ->
             val sender = sms.displayOriginatingAddress ?: return@forEach
             val body = sms.displayMessageBody ?: return@forEach
             val timestamp = sms.timestampMillis
 
-            val draft = SmsParse.parse(
+            val parsed = SmsParse.parse(
                 sender = sender,
                 body = body,
                 receivedAt = timestamp
+            ) ?: return@forEach
+
+            CoroutineScope(Dispatchers.IO).launch {
+                handleParsedExpense(context, db, currentUserId, parsed, timestamp)
+            }
+        }
+    }
+
+    /**
+     * Only MISC-category SMS ever reach the pattern engine — anything the
+     * grammar/keyword layer already categorized confidently is left alone.
+     * See SpendPatternEngine for the matching/graduation logic itself.
+     */
+    private suspend fun handleParsedExpense(
+        context: Context,
+        db: AppDatabase,
+        currentUserId: String?,
+        parsed: ExpenseScheme,
+        timestamp: Long
+    ) {
+        val patternDao = db.spendPatternDao()
+
+        val outcome = if (parsed.category == ExpenseCategory.MISC.name && currentUserId != null) {
+            val matchable = patternDao.getAllPatterns().map { pattern ->
+                SpendPatternEngine.MatchablePattern(
+                    id = pattern.id,
+                    state = pattern.state,
+                    amountMin = pattern.amountMin,
+                    amountMax = pattern.amountMax,
+                    timeStartMinutes = pattern.timeStartMinutes,
+                    timeEndMinutes = pattern.timeEndMinutes,
+                    negatives = patternDao.getNegatives(pattern.id).map { it.amount to it.timeMinutes }
+                )
+            }
+            SpendPatternEngine.matchPattern(parsed.amount, timestamp, matchable)
+        } else {
+            SpendPatternEngine.MatchOutcome.NoMatch
+        }
+
+        when (outcome) {
+            is SpendPatternEngine.MatchOutcome.Auto -> {
+                val pattern = patternDao.getPattern(outcome.patternId) ?: return
+                autoAddExpense(context, currentUserId!!, patternDao, pattern, parsed)
+            }
+
+            is SpendPatternEngine.MatchOutcome.Review -> {
+                val pattern = patternDao.getPattern(outcome.patternId) ?: return
+                val draft = parsed.copy(
+                    details = pattern.label,
+                    category = pattern.category,
+                    patternId = pattern.id
+                )
+                insertDraftAndNotify(context, db, draft)
+            }
+
+            is SpendPatternEngine.MatchOutcome.NoMatch -> {
+                insertDraftAndNotify(context, db, parsed)
+            }
+        }
+    }
+
+    private suspend fun autoAddExpense(
+        context: Context,
+        currentUserId: String,
+        patternDao: SpendPatternDao,
+        pattern: SpendPatternEntity,
+        parsed: ExpenseScheme
+    ) {
+        val finalExpense = parsed.copy(
+            id = UUID.randomUUID().toString(),
+            details = pattern.label,
+            category = pattern.category,
+            source = ExpenseSource.SMS_AUTO.name,
+            patternId = pattern.id,
+            createdAt = System.currentTimeMillis()
+        )
+
+        Firebase.firestore
+            .collection("users")
+            .document(currentUserId)
+            .collection("expenses")
+            .document(finalExpense.id)
+            .set(finalExpense)
+
+        val updatedPattern = pattern.copy(
+            occurrenceCount = pattern.occurrenceCount + 1,
+            lastMatchedAt = System.currentTimeMillis()
+        )
+        patternDao.updatePattern(updatedPattern)
+
+        Firebase.firestore
+            .collection("users")
+            .document(currentUserId)
+            .collection("spendPatterns")
+            .document(pattern.id)
+            .update(
+                mapOf(
+                    "occurrenceCount" to updatedPattern.occurrenceCount,
+                    "lastMatchedAt" to updatedPattern.lastMatchedAt
+                )
             )
 
-            if (draft != null) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    db.expenseDraftDao().insert(draft.toEntity())
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            sendNotification(
+                context,
+                title = "Auto-added: ${formatCurrency(finalExpense.amount)}",
+                text = "${pattern.label} was added automatically — look for the AI icon in your list.",
+                category = finalExpense.category
+            )
+        }
+    }
 
-                    val openAppIntent = Intent(
-                        context,
-                        MainActivity::class.java
-                    ).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    private suspend fun insertDraftAndNotify(
+        context: Context,
+        db: AppDatabase,
+        draft: ExpenseScheme
+    ) {
+        db.expenseDraftDao().insert(draft.toEntity())
 
-                        putExtra("destination", "add_edit_expense")
-                        putExtra("mode", "SMS_ADD")
-                        putExtra("smsExpenseId", draft.id)
-                    }
+        val openAppIntent = Intent(
+            context,
+            MainActivity::class.java
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
 
-                    val pendingIntent = PendingIntent.getActivity(
-                        context,
-                        draft.id.hashCode().absoluteValue,
-                        openAppIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
+            putExtra("destination", "add_edit_expense")
+            putExtra("mode", "SMS_ADD")
+            putExtra("smsExpenseId", draft.id)
+        }
 
-                    if (ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.POST_NOTIFICATIONS
-                        ) == PackageManager.PERMISSION_GRANTED
-                    ) {
-                        sendNotification(
-                            context,
-                            title = "Spent ${formatCurrency(draft.amount)}",
-                            text = "Paid to ${draft.details} using ${draft.paidFrom}",
-                            category = draft.category,
-                            pendingIntent
-                        )
-                    }
-                }
-            }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            draft.id.hashCode().absoluteValue,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            sendNotification(
+                context,
+                title = "Spent ${formatCurrency(draft.amount)}",
+                text = "Paid to ${draft.details} using ${draft.paidFrom}",
+                category = draft.category,
+                pendingIntent
+            )
         }
     }
 }

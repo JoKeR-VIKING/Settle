@@ -43,5 +43,13 @@ data class ExpenseScheme(
     val splitMode: String = SplitMode.EQUAL.name,
     val splits: List<SplitParticipant> = emptyList(),
     val createdAt: Long = 0L,
-    val recurringTemplateId: String? = null
+    val recurringTemplateId: String? = null,
+    val source: String = ExpenseSource.MANUAL.name,
+    val patternId: String? = null
 )
+
+enum class ExpenseSource {
+    MANUAL,
+    SMS_REVIEWED,
+    SMS_AUTO
+}

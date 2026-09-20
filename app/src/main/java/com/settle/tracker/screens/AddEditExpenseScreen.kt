@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
@@ -62,13 +63,19 @@ import com.settle.tracker.components.expenses.PaymentMethodField
 import com.settle.tracker.components.expenses.PaymentMethodPickerModal
 import com.settle.tracker.components.expenses.RecurringExpenseField
 import com.settle.tracker.components.expenses.SplitModeField
+import com.settle.tracker.db.PatternCandidateEntity
+import com.settle.tracker.db.SpendPatternEntity
+import com.settle.tracker.db.SpendPatternNegativeEntity
 import com.settle.tracker.scheme.ExpenseCategory
 import com.settle.tracker.scheme.ExpenseScheme
+import com.settle.tracker.scheme.ExpenseSource
 import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.RecurrenceType
 import com.settle.tracker.scheme.RecurringExpensesScheme
+import com.settle.tracker.scheme.SpendPatternScheme
 import com.settle.tracker.scheme.SplitMode
 import com.settle.tracker.scheme.SplitParticipant
+import com.settle.tracker.sms.SpendPatternEngine
 import com.settle.tracker.utils.calculateEndAt
 import com.settle.tracker.utils.calculateNextOccurrence
 import com.settle.tracker.utils.formatCurrency
@@ -136,9 +143,164 @@ fun AddEditExpenseScreen(
     var showSuccess by remember { mutableStateOf(false) }
     var previousPaymentMethods by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    // What the SMS draft was pre-filled with, captured once at load — diffed
+    // against what's actually submitted to detect a spend-pattern correction.
+    // See SpendPatternEngine.
+    var originalDraftCategory by remember { mutableStateOf<ExpenseCategory?>(null) }
+    var originalDraftDetails by remember { mutableStateOf("") }
+    var originalDraftPatternId by remember { mutableStateOf<String?>(null) }
+    var originalDraftAmount by remember { mutableStateOf(0.0) }
+    var originalDraftTimestamp by remember { mutableStateOf(0L) }
+
     fun Double.isAlmostEqualTo(other: Double?): Boolean {
         if (other == null) return false
         return abs(this - other) < 0.001
+    }
+
+    /**
+     * The only signal SpendPatternEngine ever learns from: an SMS_ADD draft
+     * being edited (or left alone) before its first save. Never fires for
+     * EDIT mode — editing an already-saved expense later is a different
+     * action and isn't part of this loop.
+     */
+    fun learnFromSmsCorrection() {
+        if (mode != "SMS_ADD") return
+
+        val finalDetails = expenseDescription.text.trim()
+        val finalCategory = category
+        val patternId = originalDraftPatternId
+        val patternDao = AppDatabase.getInstance(context).spendPatternDao()
+
+        if (patternId != null) {
+            // Case A: this draft was pre-filled from an existing REVIEW pattern.
+            val wasEdited = finalDetails != originalDraftDetails ||
+                finalCategory.name != originalDraftCategory?.name
+
+            scope.launch {
+                val pattern = patternDao.getPattern(patternId) ?: return@launch
+
+                val result = SpendPatternEngine.recordConfirmation(
+                    currentStreak = pattern.confirmStreak,
+                    wasEdited = wasEdited,
+                    amount = originalDraftAmount,
+                    timestampMillis = originalDraftTimestamp
+                )
+
+                val updated = pattern.copy(
+                    confirmStreak = result.newConfirmStreak,
+                    state = result.newState,
+                    occurrenceCount = pattern.occurrenceCount + 1,
+                    lastMatchedAt = System.currentTimeMillis()
+                )
+                patternDao.updatePattern(updated)
+
+                val patternRef = db.collection("users").document(currentUser.uid)
+                    .collection("spendPatterns").document(patternId)
+
+                patternRef.update(
+                    mapOf(
+                        "confirmStreak" to updated.confirmStreak,
+                        "state" to updated.state,
+                        "occurrenceCount" to updated.occurrenceCount,
+                        "lastMatchedAt" to updated.lastMatchedAt
+                    )
+                ).addOnFailureListener { e -> Log.e("Firestore", "${e.message}") }
+
+                result.negativeExample?.let { (negAmount, negMinutes) ->
+                    patternDao.insertNegative(
+                        SpendPatternNegativeEntity(
+                            patternId = patternId,
+                            amount = negAmount,
+                            timeMinutes = negMinutes,
+                            excludedAt = System.currentTimeMillis()
+                        )
+                    )
+                    patternRef.update(
+                        "negativeExamples",
+                        FieldValue.arrayUnion(
+                            mapOf(
+                                "amount" to negAmount,
+                                "timeMinutes" to negMinutes,
+                                "excludedAt" to System.currentTimeMillis()
+                            )
+                        )
+                    ).addOnFailureListener { e -> Log.e("Firestore", "${e.message}") }
+                }
+            }
+        } else if (originalDraftCategory == ExpenseCategory.MISC) {
+            // Case B: no pattern existed yet. A real correction away from the
+            // raw MISC guess is a candidate seed for a brand-new pattern.
+            val wasEdited = finalDetails != originalDraftDetails || finalCategory != ExpenseCategory.MISC
+            if (!wasEdited) return
+
+            scope.launch {
+                val normalizedLabel = SpendPatternEngine.normalizeLabel(finalDetails)
+
+                val candidate = SpendPatternEngine.Candidate(
+                    label = normalizedLabel,
+                    category = finalCategory.name,
+                    amount = originalDraftAmount,
+                    timestampMillis = originalDraftTimestamp
+                )
+
+                val existing = patternDao.getCandidates(normalizedLabel, finalCategory.name).map {
+                    SpendPatternEngine.Candidate(it.label, it.category, it.amount, it.timestampMillis)
+                }
+
+                patternDao.insertCandidate(
+                    PatternCandidateEntity(
+                        label = normalizedLabel,
+                        category = finalCategory.name,
+                        amount = originalDraftAmount,
+                        transactionDate = formatTimestamp(originalDraftTimestamp, "yyyy-MM-dd"),
+                        timestampMillis = originalDraftTimestamp,
+                        createdAt = System.currentTimeMillis()
+                    )
+                )
+
+                val discovered = SpendPatternEngine.tryFormCluster(candidate, existing) ?: return@launch
+
+                val newPatternId = UUID.randomUUID().toString()
+                val now = System.currentTimeMillis()
+                val newPattern = SpendPatternEntity(
+                    id = newPatternId,
+                    label = discovered.label,
+                    category = discovered.category,
+                    state = "REVIEW",
+                    amountMin = discovered.amountMin,
+                    amountMax = discovered.amountMax,
+                    timeStartMinutes = discovered.timeStartMinutes,
+                    timeEndMinutes = discovered.timeEndMinutes,
+                    confirmStreak = 0,
+                    occurrenceCount = discovered.memberCount,
+                    createdAt = now,
+                    lastMatchedAt = now
+                )
+                patternDao.insertPattern(newPattern)
+
+                db.collection("users").document(currentUser.uid)
+                    .collection("spendPatterns").document(newPatternId)
+                    .set(
+                        SpendPatternScheme(
+                            id = newPatternId,
+                            label = newPattern.label,
+                            category = newPattern.category,
+                            state = newPattern.state,
+                            amountMin = newPattern.amountMin,
+                            amountMax = newPattern.amountMax,
+                            timeStartMinutes = newPattern.timeStartMinutes,
+                            timeEndMinutes = newPattern.timeEndMinutes,
+                            confirmStreak = newPattern.confirmStreak,
+                            occurrenceCount = newPattern.occurrenceCount,
+                            createdAt = newPattern.createdAt,
+                            lastMatchedAt = newPattern.lastMatchedAt
+                        )
+                    )
+                    .addOnFailureListener { e -> Log.e("Firestore", "${e.message}") }
+
+                patternDao.clearCandidates(normalizedLabel, finalCategory.name)
+            }
+        }
     }
 
     fun checkFieldsArePopulated(): Boolean {
@@ -162,7 +324,12 @@ fun AddEditExpenseScreen(
                 "paidFrom" to paidFrom.trim().ifBlank { "Cash" },
                 "amount" to (amount.toDoubleOrNull() ?: 0.0),
                 "category" to category.name,
+                "source" to (
+                    if (mode == "SMS_ADD") ExpenseSource.SMS_REVIEWED.name else ExpenseSource.MANUAL.name
+                ),
             )
+
+            originalDraftPatternId?.let { expenseMap["patternId"] = it }
 
             if (paidBy.isNotEmpty()) {
                 expenseMap["paidBy"] = paidBy
@@ -192,6 +359,8 @@ fun AddEditExpenseScreen(
                             expenseDao.delete(id)
                         }
                     }
+
+                    learnFromSmsCorrection()
 
                     if (mode == "EDIT") {
                         isSubmittingExpense = false
@@ -299,6 +468,12 @@ fun AddEditExpenseScreen(
                     category = ExpenseCategory.valueOf(expense.category)
                     paidFrom = expense.paidFrom
                     datePickerState.selectedDateMillis = expense.timestamp
+
+                    originalDraftCategory = ExpenseCategory.valueOf(expense.category)
+                    originalDraftDetails = expense.details
+                    originalDraftPatternId = expense.patternId
+                    originalDraftAmount = expense.amount
+                    originalDraftTimestamp = expense.timestamp
                 }
                 isFetchingExpense = false
             }
