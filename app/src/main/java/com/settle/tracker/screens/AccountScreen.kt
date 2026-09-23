@@ -241,11 +241,13 @@ fun AccountScreen(
                 )
 
                 Text(
-                    text = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    text = "Version - v${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 )
 
                 Spacer(Modifier.height(24.dp))
