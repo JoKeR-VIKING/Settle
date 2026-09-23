@@ -186,24 +186,15 @@ fun FullScreenDialog(
             append("\n\n— Sent from Settle")
         }
 
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, message)
-            setPackage("com.whatsapp")
-        }
-        try {
-            context.startActivity(intent)
-        } catch (_: Exception) {
-            context.startActivity(
-                Intent.createChooser(
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, message)
-                    },
-                    "Invite via"
-                )
+        context.startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, message)
+                },
+                "Invite via"
             )
-        }
+        )
     }
 
     fun deleteGroup(groupId: String) {
