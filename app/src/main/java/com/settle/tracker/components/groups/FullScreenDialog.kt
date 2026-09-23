@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.utils.fetchGroupMembersChunked
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,6 +175,21 @@ fun FullScreenDialog(
             }
     }
 
+    fun shareGroupInviteLink() {
+        val encodedName = URLEncoder.encode(groupData.groupName, "UTF-8")
+        val link = "https://settle-887b2.web.app/join?groupId=${groupData.id}&groupName=$encodedName"
+
+        context.startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, link)
+                },
+                "Invite via"
+            )
+        )
+    }
+
     fun deleteGroup(groupId: String) {
         isLoading = true
 
@@ -220,6 +237,24 @@ fun FullScreenDialog(
         isLoading
     ) {
         Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            "Group Settings",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Filled.Clear,
+                                contentDescription = "Close Group Settings"
+                            )
+                        }
+                    }
+                )
+            },
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState) { snackbarData ->
                     Snackbar(
@@ -234,10 +269,11 @@ fun FullScreenDialog(
                     }
                 }
             }
-        ) {
+        ) { innerPadding ->
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(innerPadding)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
@@ -245,82 +281,69 @@ fun FullScreenDialog(
                         focusManager.clearFocus()
                     }
             ) {
-                Column {
-                    CenterAlignedTopAppBar(
-                        title = {
-                            Text(
-                                "Group Settings",
-                                style = MaterialTheme.typography.bodyLarge
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(36.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        GroupNameField(
+                            groupName = groupName,
+                            originalGroupName = groupData.groupName,
+                            onGroupNameChange = { groupName = it },
+                            isEditing = isEditingGroupName,
+                            onSave = { updateGroupName() }
+                        )
+
+                        IconButton(
+                            onClick = { isDeletingGroup = true }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "Delete Group"
                             )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    imageVector = Icons.Filled.Clear,
-                                    contentDescription = "Close Group Settings"
-                                )
-                            }
                         }
-                    )
+                    }
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(36.dp)
+                            .weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            GroupNameField(
-                                groupName = groupName,
-                                originalGroupName = groupData.groupName,
-                                onGroupNameChange = { groupName = it },
-                                isEditing = isEditingGroupName,
-                                onSave = { updateGroupName() }
-                            )
-
-                            IconButton(
-                                onClick = { isDeletingGroup = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Delete,
-                                    contentDescription = "Delete Group"
+                        AddMemberButton(
+                            onClick = {
+                                contactPickerLauncher.launch(
+                                    Intent(
+                                        Intent.ACTION_PICK,
+                                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+                                    )
                                 )
                             }
-                        }
+                        )
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            AddMemberButton(
-                                onClick = {
-                                    contactPickerLauncher.launch(
-                                        Intent(
-                                            Intent.ACTION_PICK,
-                                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI
-                                        )
-                                    )
-                                }
-                            )
+                        AddMemberButton(
+                            label = "Invite via Link",
+                            icon = Icons.Filled.Link,
+                            onClick = { shareGroupInviteLink() }
+                        )
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                            GroupMemberList(
-                                groupData = groupData,
-                                groupMembers = groupMembers,
-                                updateLoadingStatus = {
-                                    isLoading = it
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                        GroupMemberList(
+                            groupData = groupData,
+                            groupMembers = groupMembers,
+                            updateLoadingStatus = {
+                                isLoading = it
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Join group on Settle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body {
+    font-family: -apple-system, Roboto, Arial, sans-serif;
+    background: #0B1120;
+    color: #F8FAFC;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  .card { max-width: 360px; }
+  a.btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 28px;
+    background: #14B8A6;
+    color: #0B1120;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  p { opacity: 0.8; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2>Opening Settle&hellip;</h2>
+    <p>If nothing happens, tap below to continue.</p>
+    <a class="btn" id="fallback-link" href="https://play.google.com/store/apps/details?id=com.settle.tracker">Open Settle</a>
+  </div>
+  <script>
+    (function () {
+      var params = window.location.search;
+      var playStoreUrl = "https://play.google.com/store/apps/details?id=com.settle.tracker";
+      var ua = navigator.userAgent || "";
+      var isAndroid = /Android/i.test(ua);
+
+      document.getElementById("fallback-link").href = playStoreUrl;
+
+      if (isAndroid) {
+        var intentUrl = "intent://join" + params +
+          "#Intent;scheme=settle;package=com.settle.tracker;S.browser_fallback_url=" +
+          encodeURIComponent(playStoreUrl) + ";end";
+        window.location.href = intentUrl;
+      } else {
+        window.location.href = playStoreUrl;
+      }
+    })();
+  </script>
+</body>
+</html>

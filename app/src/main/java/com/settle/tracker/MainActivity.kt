@@ -1,9 +1,10 @@
 package com.settle.tracker
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
+import android.widget.Toast
 import androidx.core.app.NotificationManagerCompat
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,9 +16,11 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +29,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,11 +41,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
+import com.settle.tracker.components.AppLockScreen
 import com.settle.tracker.components.BottomBar
 import com.settle.tracker.components.BottomBarScreen
+import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.components.ForceUpdateOverlay
 import com.settle.tracker.components.UpdateBanner
 import com.settle.tracker.utils.UpdateStatus
@@ -51,14 +61,17 @@ import com.settle.tracker.screens.GroupExpensesScreen
 import com.settle.tracker.screens.GroupsScreen
 import com.settle.tracker.screens.IssueReportsScreen
 import com.settle.tracker.screens.LoginScreen
+import com.settle.tracker.screens.PermissionPrimerScreen
 import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.screens.ReportIssueScreen
+import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.ui.theme.SettleTheme
+import com.settle.tracker.utils.LocalAppLockState
 import com.settle.tracker.utils.LocalThemeState
 import com.settle.tracker.utils.SettlePermission
 import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.createSmsNotificationChannel
-import com.settle.tracker.utils.rememberPermissionRequester
+import com.settle.tracker.utils.rememberAppLockState
 import com.settle.tracker.utils.rememberThemeState
 import com.settle.tracker.utils.saveTokenToFirestore
 import kotlinx.coroutines.launch
@@ -96,10 +109,12 @@ sealed class Screen(val route: String) {
     object IssueReports : Screen("issue_reports")
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private var destination by mutableStateOf<String?>(null)
     private var mode by mutableStateOf<String?>(null)
     private var smsExpenseId by mutableStateOf<String?>(null)
+    private var joinGroupId by mutableStateOf<String?>(null)
+    private var joinGroupName by mutableStateOf<String?>(null)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -118,6 +133,13 @@ class MainActivity : ComponentActivity() {
         destination = intent.getStringExtra("destination")
         mode = intent.getStringExtra("mode")
         smsExpenseId = intent.getStringExtra("smsExpenseId")
+
+        // Group invite deep link: settle://join?groupId=...&groupName=...
+        val uri = intent.data
+        if (uri != null && uri.host == "join") {
+            joinGroupId = uri.getQueryParameter("groupId")
+            joinGroupName = uri.getQueryParameter("groupName")
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -126,9 +148,9 @@ class MainActivity : ComponentActivity() {
 
         createSmsNotificationChannel(this)
 
-        // NOTE: Permissions are now requested on-demand at the exact moment
-        // the user needs them (SMS when tapping "Add From SMS", Contacts when
-        // adding members, Notifications right after first login).
+        // NOTE: Permissions are requested on-demand at the exact moment the
+        // user needs them (SMS when tapping "Add From SMS", Contacts when
+        // adding members) plus once, educationally, via PermissionPrimerScreen.
 
         updateIntent(intent)
 
@@ -137,7 +159,10 @@ class MainActivity : ComponentActivity() {
                 activity = this,
                 destination = destination,
                 mode = mode,
-                smsExpenseId = smsExpenseId
+                smsExpenseId = smsExpenseId,
+                joinGroupId = joinGroupId,
+                joinGroupName = joinGroupName,
+                onJoinGroupHandled = { joinGroupId = null; joinGroupName = null }
             )
         }
     }
@@ -148,7 +173,10 @@ private fun AppContent(
     activity: MainActivity,
     destination: String?,
     mode: String?,
-    smsExpenseId: String?
+    smsExpenseId: String?,
+    joinGroupId: String?,
+    joinGroupName: String?,
+    onJoinGroupHandled: () -> Unit
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -178,24 +206,34 @@ private fun AppContent(
         updateStatus = checkForUpdate(BuildConfig.VERSION_CODE)
     }
 
-    // Initial permission sequence: Notifications -> Read SMS -> Receive SMS (polite ask)
-    val receiveSmsPermission = rememberPermissionRequester(
-        permission = SettlePermission.ReceiveSms,
-        showSettingsOnDenial = false
-    ) { }
-    val readSmsPermission = rememberPermissionRequester(
-        permission = SettlePermission.ReadSms,
-        showSettingsOnDenial = false
-    ) { receiveSmsPermission.request() }
-    val initialPermissions = rememberPermissionRequester(
-        permission = SettlePermission.Notifications,
-        showSettingsOnDenial = false
-    ) { readSmsPermission.request() }
+    // First-open (or first-open-after-update-with-new-permissions) primer: purely
+    // educational, shown once per permission. Skipping is always safe — the
+    // on-demand per-feature prompts (Permissions.kt) still ask when needed.
+    val shownPermissions = remember { prefs.readShownPermissions() }
+    val pendingPermissions = remember(shownPermissions) {
+        SettlePermission.entries.filter {
+            Build.VERSION.SDK_INT >= it.minApi && it.androidKey !in shownPermissions
+        }
+    }
+    var showPermissionPrimer by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentUser) {
-        if (currentUser != null && prefs.isFirstRun(SettlePrefs.PROMPT_INITIAL_PERMISSIONS)) {
-            prefs.markSeen(SettlePrefs.PROMPT_INITIAL_PERMISSIONS)
-            initialPermissions.request()
+        if (currentUser != null && pendingPermissions.isNotEmpty()) {
+            showPermissionPrimer = true
+        }
+    }
+
+    val appLockState = rememberAppLockState(activity)
+
+    DisposableEffect(appLockState) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                appLockState.lock()
+            }
+        }
+        ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
+        onDispose {
+            ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
         }
     }
 
@@ -266,9 +304,73 @@ private fun AppContent(
         }
     }
 
+    // Group invite link (settle://join?groupId=...) — waits for sign-in the same
+    // way the destination routing above does, then asks before adding anyone.
+    var pendingJoinGroupId by remember { mutableStateOf<String?>(null) }
+    var pendingJoinGroupName by remember { mutableStateOf("") }
+    var isJoiningGroup by remember { mutableStateOf(false) }
+
+    LaunchedEffect(joinGroupId, joinGroupName, currentUser) {
+        val groupId = joinGroupId
+        val user = currentUser
+        if (user == null || groupId.isNullOrBlank()) return@LaunchedEffect
+
+        val fallbackName = joinGroupName?.ifBlank { null } ?: "this group"
+
+        db.collection("groups").document(groupId).get()
+            .addOnSuccessListener { snapshot ->
+                val group = snapshot.toObject(GroupScheme::class.java)
+                if (group != null && group.members.contains(user.uid)) {
+                    Toast.makeText(
+                        activity,
+                        "You are already part of this group",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    onJoinGroupHandled()
+                    navController.navigate(Screen.GroupExpenses.createRoute(groupId)) {
+                        launchSingleTop = true
+                    }
+                } else {
+                    pendingJoinGroupId = groupId
+                    pendingJoinGroupName = group?.groupName?.ifBlank { null } ?: fallbackName
+                }
+            }
+            .addOnFailureListener {
+                // Most likely: security rules don't allow a non-member to read
+                // this group yet. Fall back to the link's own group name and
+                // let the join attempt itself be the source of truth.
+                pendingJoinGroupId = groupId
+                pendingJoinGroupName = fallbackName
+            }
+    }
+
+    fun joinGroup() {
+        val groupId = pendingJoinGroupId ?: return
+        val user = currentUser ?: return
+        isJoiningGroup = true
+
+        db.collection("groups").document(groupId)
+            .update("members", FieldValue.arrayUnion(user.uid))
+            .addOnSuccessListener {
+                isJoiningGroup = false
+                pendingJoinGroupId = null
+                onJoinGroupHandled()
+                navController.navigate(Screen.GroupExpenses.createRoute(groupId)) {
+                    launchSingleTop = true
+                }
+            }
+            .addOnFailureListener { e ->
+                isJoiningGroup = false
+                pendingJoinGroupId = null
+                onJoinGroupHandled()
+                Log.e("Firestore", "Failed to join group: ${e.message}")
+            }
+    }
+
     SettleTheme(themeMode = themeState.mode.value) {
         CompositionLocalProvider(
-            LocalThemeState provides themeState
+            LocalThemeState provides themeState,
+            LocalAppLockState provides appLockState
         ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -450,6 +552,31 @@ private fun AppContent(
         val forceStatus = updateStatus
         if (forceStatus is UpdateStatus.ForceUpdate) {
             ForceUpdateOverlay()
+        } else if (currentUser != null && appLockState.enabled.value && !appLockState.unlocked.value) {
+            AppLockScreen(activity = activity, onUnlocked = { appLockState.unlock() })
+        } else if (currentUser != null && showPermissionPrimer) {
+            PermissionPrimerScreen(
+                pendingPermissions = pendingPermissions,
+                onFinished = {
+                    prefs.markPermissionsShown(pendingPermissions.map { it.androidKey })
+                    showPermissionPrimer = false
+                }
+            )
+        }
+
+        if (pendingJoinGroupId != null) {
+            ConfirmAlertDialog(
+                title = "Join group?",
+                text = "You've been invited to join:",
+                subText = pendingJoinGroupName,
+                onConfirm = { if (!isJoiningGroup) joinGroup() },
+                toggleAlert = {
+                    pendingJoinGroupId = null
+                    onJoinGroupHandled()
+                },
+                confirmText = if (isJoiningGroup) "Joining…" else "Join",
+                confirmColor = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

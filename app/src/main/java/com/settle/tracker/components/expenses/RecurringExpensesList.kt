@@ -46,6 +46,8 @@ import com.settle.tracker.scheme.RecurringExpensesScheme
 import com.settle.tracker.utils.calculateNextOccurrence
 import com.settle.tracker.utils.formatCurrency
 import com.settle.tracker.utils.formatTimestamp
+import com.settle.tracker.ui.theme.Success
+import com.settle.tracker.ui.theme.Warning
 import com.settle.tracker.utils.getExpenseCategoryColor
 import com.settle.tracker.utils.getExpenseCategoryIcon
 
@@ -298,7 +300,7 @@ fun RecurringExpensesList(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = if (template.paused) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceBright
+                            color = if (template.paused) Warning else Success
                         )
                     }
                 }

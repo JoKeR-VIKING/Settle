@@ -25,11 +25,14 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,21 +51,27 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
+import com.settle.tracker.BuildConfig
 import com.settle.tracker.GoogleAuthClient
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.account.ProfileHeader
 import com.settle.tracker.components.account.UpiIdField
 import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.ui.animations.bounceClickable
+import com.settle.tracker.utils.LocalAppLockState
 import com.settle.tracker.utils.LocalThemeState
 import com.settle.tracker.utils.SettleLinks
 import com.settle.tracker.utils.SettlePrefs
 import com.settle.tracker.utils.ThemeMode
+import com.settle.tracker.utils.canUseBiometricLock
 import com.settle.tracker.utils.isAdminUser
 import com.settle.tracker.utils.openUrl
+import com.settle.tracker.utils.showBiometricPrompt
 import kotlinx.coroutines.launch
 
 @Composable
@@ -73,9 +82,11 @@ fun AccountScreen(
     onOpenIssueReports: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val activity = context as? FragmentActivity
     val scope = rememberCoroutineScope()
     val prefs = remember { SettlePrefs(context.applicationContext) }
     val themeState = LocalThemeState.current
+    val appLockState = LocalAppLockState.current
 
     val db = Firebase.firestore
 
@@ -177,6 +188,27 @@ fun AccountScreen(
                     onSelect = { themeState.set(it) }
                 )
 
+                SectionLabel("Security")
+
+                AppLockCard(
+                    enabled = appLockState.enabled.value,
+                    onToggle = { checked ->
+                        when {
+                            !checked -> appLockState.setEnabled(false)
+                            !context.canUseBiometricLock() -> Toast.makeText(
+                                context,
+                                "Set up a fingerprint, face unlock or screen lock in your device settings first.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            else -> activity?.showBiometricPrompt(
+                                title = "Enable App Lock",
+                                subtitle = "Verify it's you to turn this on",
+                                onSuccess = { appLockState.setEnabled(true) }
+                            )
+                        }
+                    }
+                )
+
                 SectionLabel("About")
 
                 ActionRow(
@@ -236,6 +268,16 @@ fun AccountScreen(
                             else Toast.makeText(context, "Sign out failed", Toast.LENGTH_SHORT).show()
                         }
                     }
+                )
+
+                Text(
+                    text = "Version - v${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -325,6 +367,50 @@ private fun ThemeSelectorCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AppLockCard(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Fingerprint,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.size(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("App Lock", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Require biometrics to open Settle. Notifications still come through.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+        )
     }
 }
 
