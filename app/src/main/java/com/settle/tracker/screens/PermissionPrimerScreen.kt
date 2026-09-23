@@ -228,6 +228,7 @@ private fun PrimerInfoPage(icon: ImageVector, headline: String, body: String) {
             headline,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(10.dp))
@@ -255,6 +256,7 @@ private fun PermissionCardPage(card: PrimerCard) {
             card.headline,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(10.dp))
