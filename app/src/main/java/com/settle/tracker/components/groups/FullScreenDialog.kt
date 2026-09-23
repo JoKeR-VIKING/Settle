@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.scheme.UserScheme
 import com.settle.tracker.utils.fetchGroupMembersChunked
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -171,6 +173,37 @@ fun FullScreenDialog(
             .addOnFailureListener {
                 isLoading = false
             }
+    }
+
+    fun shareGroupInviteLink() {
+        val encodedName = URLEncoder.encode(groupData.groupName, "UTF-8")
+        val link = "settle://join?groupId=${groupData.id}&groupName=$encodedName"
+
+        val message = buildString {
+            append("Hey! 👋\n")
+            append("Join \"${groupData.groupName}\" on Settle so we can split expenses together:\n")
+            append(link)
+            append("\n\n— Sent from Settle")
+        }
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+            setPackage("com.whatsapp")
+        }
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            context.startActivity(
+                Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, message)
+                    },
+                    "Invite via"
+                )
+            )
+        }
     }
 
     fun deleteGroup(groupId: String) {
@@ -308,6 +341,12 @@ fun FullScreenDialog(
                                         )
                                     )
                                 }
+                            )
+
+                            AddMemberButton(
+                                label = "Invite via Link",
+                                icon = Icons.Filled.Link,
+                                onClick = { shareGroupInviteLink() }
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))

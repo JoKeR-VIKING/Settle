@@ -3,6 +3,7 @@ package com.settle.tracker
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.NotificationManagerCompat
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,11 +36,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.settle.tracker.components.BottomBar
 import com.settle.tracker.components.BottomBarScreen
+import com.settle.tracker.components.ConfirmAlertDialog
 import com.settle.tracker.components.ForceUpdateOverlay
 import com.settle.tracker.components.UpdateBanner
 import com.settle.tracker.utils.UpdateStatus
@@ -53,6 +57,7 @@ import com.settle.tracker.screens.IssueReportsScreen
 import com.settle.tracker.screens.LoginScreen
 import com.settle.tracker.screens.PhoneVerificationScreen
 import com.settle.tracker.screens.ReportIssueScreen
+import com.settle.tracker.scheme.GroupScheme
 import com.settle.tracker.ui.theme.SettleTheme
 import com.settle.tracker.utils.LocalThemeState
 import com.settle.tracker.utils.SettlePermission
@@ -100,6 +105,8 @@ class MainActivity : ComponentActivity() {
     private var destination by mutableStateOf<String?>(null)
     private var mode by mutableStateOf<String?>(null)
     private var smsExpenseId by mutableStateOf<String?>(null)
+    private var joinGroupId by mutableStateOf<String?>(null)
+    private var joinGroupName by mutableStateOf<String?>(null)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -118,6 +125,13 @@ class MainActivity : ComponentActivity() {
         destination = intent.getStringExtra("destination")
         mode = intent.getStringExtra("mode")
         smsExpenseId = intent.getStringExtra("smsExpenseId")
+
+        // Group invite deep link: settle://join?groupId=...&groupName=...
+        val uri = intent.data
+        if (uri != null && uri.host == "join") {
+            joinGroupId = uri.getQueryParameter("groupId")
+            joinGroupName = uri.getQueryParameter("groupName")
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,7 +151,10 @@ class MainActivity : ComponentActivity() {
                 activity = this,
                 destination = destination,
                 mode = mode,
-                smsExpenseId = smsExpenseId
+                smsExpenseId = smsExpenseId,
+                joinGroupId = joinGroupId,
+                joinGroupName = joinGroupName,
+                onJoinGroupHandled = { joinGroupId = null; joinGroupName = null }
             )
         }
     }
@@ -148,7 +165,10 @@ private fun AppContent(
     activity: MainActivity,
     destination: String?,
     mode: String?,
-    smsExpenseId: String?
+    smsExpenseId: String?,
+    joinGroupId: String?,
+    joinGroupName: String?,
+    onJoinGroupHandled: () -> Unit
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -264,6 +284,69 @@ private fun AppContent(
                 navController.navigate(Screen.Groups.route) { launchSingleTop = true }
             }
         }
+    }
+
+    // Group invite link (settle://join?groupId=...) — waits for sign-in the same
+    // way the destination routing above does, then asks before adding anyone.
+    var pendingJoinGroupId by remember { mutableStateOf<String?>(null) }
+    var pendingJoinGroupName by remember { mutableStateOf("") }
+    var isJoiningGroup by remember { mutableStateOf(false) }
+
+    LaunchedEffect(joinGroupId, joinGroupName, currentUser) {
+        val groupId = joinGroupId
+        val user = currentUser
+        if (user == null || groupId.isNullOrBlank()) return@LaunchedEffect
+
+        val fallbackName = joinGroupName?.ifBlank { null } ?: "this group"
+
+        db.collection("groups").document(groupId).get()
+            .addOnSuccessListener { snapshot ->
+                val group = snapshot.toObject(GroupScheme::class.java)
+                if (group != null && group.members.contains(user.uid)) {
+                    Toast.makeText(
+                        activity,
+                        "You are already part of this group",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    onJoinGroupHandled()
+                    navController.navigate(Screen.GroupExpenses.createRoute(groupId)) {
+                        launchSingleTop = true
+                    }
+                } else {
+                    pendingJoinGroupId = groupId
+                    pendingJoinGroupName = group?.groupName?.ifBlank { null } ?: fallbackName
+                }
+            }
+            .addOnFailureListener {
+                // Most likely: security rules don't allow a non-member to read
+                // this group yet. Fall back to the link's own group name and
+                // let the join attempt itself be the source of truth.
+                pendingJoinGroupId = groupId
+                pendingJoinGroupName = fallbackName
+            }
+    }
+
+    fun joinGroup() {
+        val groupId = pendingJoinGroupId ?: return
+        val user = currentUser ?: return
+        isJoiningGroup = true
+
+        db.collection("groups").document(groupId)
+            .update("members", FieldValue.arrayUnion(user.uid))
+            .addOnSuccessListener {
+                isJoiningGroup = false
+                pendingJoinGroupId = null
+                onJoinGroupHandled()
+                navController.navigate(Screen.GroupExpenses.createRoute(groupId)) {
+                    launchSingleTop = true
+                }
+            }
+            .addOnFailureListener { e ->
+                isJoiningGroup = false
+                pendingJoinGroupId = null
+                onJoinGroupHandled()
+                Log.e("Firestore", "Failed to join group: ${e.message}")
+            }
     }
 
     SettleTheme(themeMode = themeState.mode.value) {
@@ -450,6 +533,21 @@ private fun AppContent(
         val forceStatus = updateStatus
         if (forceStatus is UpdateStatus.ForceUpdate) {
             ForceUpdateOverlay()
+        }
+
+        if (pendingJoinGroupId != null) {
+            ConfirmAlertDialog(
+                title = "Join group?",
+                text = "You've been invited to join:",
+                subText = pendingJoinGroupName,
+                onConfirm = { if (!isJoiningGroup) joinGroup() },
+                toggleAlert = {
+                    pendingJoinGroupId = null
+                    onJoinGroupHandled()
+                },
+                confirmText = if (isJoiningGroup) "Joining…" else "Join",
+                confirmColor = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

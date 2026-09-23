@@ -16,12 +16,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.settle.tracker.utils.dashedBorder
 
 @Composable
 fun AddMemberButton(
     modifier: Modifier = Modifier,
+    label: String = "Add Member",
+    icon: ImageVector = Icons.Filled.Add,
     onClick: () -> Unit
 ) {
     OutlinedButton(
@@ -44,15 +47,15 @@ fun AddMemberButton(
     ) {
         Icon(
             modifier = Modifier.size(20.dp),
-            imageVector = Icons.Filled.Add,
-            contentDescription = "Add New Member",
+            imageVector = icon,
+            contentDescription = label,
             tint = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.width(10.dp))
 
         Text(
-            "Add Member",
+            label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
