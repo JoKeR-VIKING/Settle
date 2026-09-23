@@ -48,9 +48,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
+import com.settle.tracker.BuildConfig
 import com.settle.tracker.GoogleAuthClient
 import com.settle.tracker.components.LoadingScreenWrapper
 import com.settle.tracker.components.account.ProfileHeader
@@ -236,6 +238,14 @@ fun AccountScreen(
                             else Toast.makeText(context, "Sign out failed", Toast.LENGTH_SHORT).show()
                         }
                     }
+                )
+
+                Text(
+                    text = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(24.dp))
