@@ -42,11 +42,18 @@ class SettlePrefs(context: Context) {
     fun writeLastCrash(trace: String) { sp.edit { putString("last_crash", trace) } }
     fun clearLastCrash() { sp.edit { remove("last_crash") } }
 
+    fun isBiometricLockEnabled(): Boolean = sp.getBoolean("biometric_lock_enabled", false)
+    fun setBiometricLockEnabled(enabled: Boolean) { sp.edit { putBoolean("biometric_lock_enabled", enabled) } }
+
+    /** Permission android keys the first-run/first-update primer has already shown the user. */
+    fun readShownPermissions(): Set<String> = sp.getStringSet("shown_permissions", emptySet()) ?: emptySet()
+    fun markPermissionsShown(keys: Collection<String>) {
+        sp.edit { putStringSet("shown_permissions", readShownPermissions() + keys) }
+    }
+
     companion object {
         const val TUTORIAL_EXPENSES = "tutorial_expenses"
         const val TUTORIAL_GROUPS = "tutorial_groups"
         const val TUTORIAL_ANALYTICS = "tutorial_analytics"
-        const val PROMPT_INITIAL_PERMISSIONS = "prompt_initial_permissions"
-        const val PROMPT_NOTIFICATIONS = "prompt_notifications"
     }
 }

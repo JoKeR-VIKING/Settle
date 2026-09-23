@@ -93,6 +93,8 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
     implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.lifecycle.process)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
