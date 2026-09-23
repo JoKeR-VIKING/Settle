@@ -177,20 +177,13 @@ fun FullScreenDialog(
 
     fun shareGroupInviteLink() {
         val encodedName = URLEncoder.encode(groupData.groupName, "UTF-8")
-        val link = "settle://join?groupId=${groupData.id}&groupName=$encodedName"
-
-        val message = buildString {
-            append("Hey! 👋\n")
-            append("Join \"${groupData.groupName}\" on Settle so we can split expenses together:\n")
-            append(link)
-            append("\n\n— Sent from Settle")
-        }
+        val link = "https://settle-887b2.web.app/join?groupId=${groupData.id}&groupName=$encodedName"
 
         context.startActivity(
             Intent.createChooser(
                 Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, message)
+                    putExtra(Intent.EXTRA_TEXT, link)
                 },
                 "Invite via"
             )
