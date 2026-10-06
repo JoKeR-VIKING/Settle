@@ -14,7 +14,7 @@ that add themselves from your bank SMS.
 ![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF?logo=kotlin&logoColor=white)
 ![Firebase](https://img.shields.io/badge/backend-Firebase-FFCA28?logo=firebase&logoColor=black)
 
-[**Join the beta**](#-try-the-beta) · [Features](#-features) · [Tech stack](#-tech-stack) · [Architecture](#-architecture)
+[**Join the beta**](#-try-the-beta) · [Demo](#-demo) · [Features](#-features) · [Tech stack](#-tech-stack) · [Architecture](#-architecture)
 
 </div>
 
@@ -29,6 +29,14 @@ that add themselves from your bank SMS.
   <img src="docs/screenshots/4.png" width="19%" alt="Monthly spending analytics" />
   <img src="docs/screenshots/5.png" width="19%" alt="Recurring expenses" />
 </p>
+
+## 🎬 Demo
+
+<p align="center">
+  <img src="docs/demo.gif" width="300" alt="Settle app walkthrough: expenses, adding an expense, recurring, groups and analytics" />
+</p>
+
+<!-- Full-length video: paste the GitHub upload link for settle_demo.mp4 on the line below -->
 
 ## 🧪 Try the beta
 
