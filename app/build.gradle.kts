@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -62,8 +64,15 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Tester emails live in local.properties (gitignored) as
+// appDistribution.testers=a@example.com, b@example.com
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 firebaseAppDistributionDefault {
-    testers = "prathamvasani1@gmail.com, divyakhilari2003@gmail.com"
+    val localTesters = localProperties.getProperty("appDistribution.testers")
+    if (localTesters != null) testers = localTesters
 }
 
 dependencies {
