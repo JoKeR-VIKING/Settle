@@ -34,7 +34,7 @@ that add themselves from your bank SMS.
 
 Settle is in **closed testing on Google Play**, so it isn't publicly listed yet. To get it:
 
-1. **Join the tester group** → [Settle Beta Testers](GOOGLE_GROUP_LINK) (use the Google account signed in on your phone)
+1. **Join the tester group** → [Settle Beta Testers](https://groups.google.com/g/settle-beta-testers) (use the Google account signed in on your phone)
 2. **Opt in to testing** → [play.google.com/apps/testing/com.settle.tracker](https://play.google.com/apps/testing/com.settle.tracker)
 3. **Install** from the Play Store link on that page. Updates arrive automatically like any other app.
 
