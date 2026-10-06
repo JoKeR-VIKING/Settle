@@ -248,7 +248,9 @@ fun calculateNextOccurrence(
 }
 
 fun toFullMonthName(month: String): String {
-    val formatter = DateTimeFormatter.ofPattern("MMM yy", Locale.getDefault())
+    // Month labels are built with Locale.ENGLISH (PersonalExpensesTransformer);
+    // parsing with the device locale breaks e.g. en-IN, which expects "Sept".
+    val formatter = DateTimeFormatter.ofPattern("MMM yy", Locale.ENGLISH)
 
     return Month
         .from(formatter.parse(month))

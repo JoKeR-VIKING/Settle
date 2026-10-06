@@ -24,10 +24,10 @@ that add themselves from your bank SMS.
 
 <p align="center">
   <img src="docs/screenshots/1.png" width="19%" alt="Expenses home" />
-  <img src="docs/screenshots/2.png" width="19%" alt="Groups and balances" />
-  <img src="docs/screenshots/3.png" width="19%" alt="Add expense with split" />
-  <img src="docs/screenshots/4.png" width="19%" alt="Expense drafted from SMS" />
-  <img src="docs/screenshots/5.png" width="19%" alt="Analytics" />
+  <img src="docs/screenshots/2.png" width="19%" alt="Add expense with category picker" />
+  <img src="docs/screenshots/3.png" width="19%" alt="Groups" />
+  <img src="docs/screenshots/4.png" width="19%" alt="Monthly spending analytics" />
+  <img src="docs/screenshots/5.png" width="19%" alt="Recurring expenses" />
 </p>
 
 ## 🧪 Try the beta
